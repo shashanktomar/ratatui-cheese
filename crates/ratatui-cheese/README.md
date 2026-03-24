@@ -17,6 +17,9 @@ ratatui-cheese = "0.1"
 
 Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line, Dot, MiniDot, Jump, Pulse, Points, Globe, Moon, Monkey, Meter, Hamburger, Ellipsis.
 
+<details>
+<summary>Usage</summary>
+
 ```rust
 use std::time::Instant;
 use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
@@ -35,6 +38,8 @@ last_tick = now;
 // In your draw function:
 frame.render_stateful_widget(&spinner, area, &mut state);
 ```
+
+</details>
 
 ![Spinners](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/spinners.gif)
 
