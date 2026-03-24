@@ -38,10 +38,17 @@ ctrl-d = "scroll-page(1)"
 c = "job:check"
 l = "job:lint"
 d = "job:dead-code"
+s = "job:showcase"
 
 # ==================================================================
 # =============== Default Tasks Provided By Bacon ==================
 # ==================================================================
+
+[jobs.showcase]
+command = ["cargo", "run", "-p", "cheese-showcase"]
+need_stdout = true
+allow_warnings = true
+background = true
 
 [jobs.clippy-all]
 command = ["cargo", "clippy", "--all-targets"]

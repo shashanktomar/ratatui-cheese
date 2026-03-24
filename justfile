@@ -46,6 +46,11 @@ check:
 # Run all quality gates: check, test, lint, dead-code
 all: check test lint dead-code
 
+# Run the cheese-showcase demo app
+[group('dev')]
+showcase:
+	cargo run -p cheese-showcase
+
 # Start bacon watch tool for live feedback
 [group('dev')]
 watch:

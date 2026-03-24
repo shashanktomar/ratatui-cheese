@@ -4,7 +4,7 @@
 #
 # This script reads the project-manifest.yaml file and updates
 # all repositories listed in the references->repos section
-# in the .tmp/code directory. It clones missing repos and pulls
+# in the .ref/code directory. It clones missing repos and pulls
 # latest changes for existing ones.
 #
 # Examples:
@@ -30,7 +30,7 @@ def main [
 
     # Read and parse the manifest file
     let manifest = open $manifest_path
-    let clone_dir = $manifest.references.clone_dir? | default ".tmp/code"
+    let clone_dir = $manifest.references.clone_dir? | default ".ref/code"
     let repos = $manifest.references.repos?
 
     if $repos == null or ($repos | length) == 0 {
@@ -125,7 +125,7 @@ def "main status" []: nothing -> table {
 
     # Read manifest
     let manifest = open $manifest_path
-    let clone_dir = $manifest.references.clone_dir? | default ".tmp/code"
+    let clone_dir = $manifest.references.clone_dir? | default ".ref/code"
     let repos = $manifest.references.repos?
 
     if $repos == null or ($repos | length) == 0 {

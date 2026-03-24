@@ -1,8 +1,8 @@
 # Rust
 /target/
 
-# Tmp
-.tmp/
+# Reference repos
+.ref/
 
 # OS
 .DS_Store

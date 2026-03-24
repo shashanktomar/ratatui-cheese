@@ -1,0 +1,11 @@
+[package]
+name = "cheese-core"
+version = "0.1.0"
+description = "Shared traits and utilities for ratatui-cheese widget crates"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ratatui = { workspace = true }

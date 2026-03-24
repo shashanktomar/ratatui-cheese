@@ -32,7 +32,7 @@ just all        # run all quality gates
 
 ## Reference Repos
 
-The project tracks upstream repositories (ratatui, bubbles, bubbletea) for reference. These are synced into `.tmp/code/` and gitignored.
+The project tracks upstream repositories (ratatui, bubbles, bubbletea) for reference. These are synced into `.ref/code/` and gitignored.
 
 ```sh
 just update-reference-repos   # clone/update reference repos

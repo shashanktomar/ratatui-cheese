@@ -1,13 +1,14 @@
-[package]
-name = "ratatui-cheese"
-version = "0.1.0"
+[workspace]
+resolver = "3"
+members = ["crates/cheese-core", "crates/cheese-showcase", "crates/cheese-spinner"]
+
+[workspace.package]
 edition = "2024"
 authors = ["Shashank Tomar <https://github.com/shashanktomar>"]
-description = "Bubbletea-inspired components for Ratatui"
 license = "MIT"
 
-[dependencies]
+[workspace.dependencies]
 ratatui = "0.30"
 crossterm = "0.29"
-
-[dev-dependencies]
+cheese-core = { path = "crates/cheese-core" }
+cheese-spinner = { path = "crates/cheese-spinner" }

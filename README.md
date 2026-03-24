@@ -11,6 +11,16 @@ Add to your `Cargo.toml`:
 ratatui-cheese = "0.1"
 ```
 
+## Widgets
+
+### Spinner
+
+Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line, Dot, MiniDot, Jump, Pulse, Points, Globe, Moon, Monkey, Meter, Hamburger, Ellipsis.
+
+<!-- TODO: Add screenshot -->
+
+[Usage & docs](crates/cheese-spinner/README.md)
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and development workflow.

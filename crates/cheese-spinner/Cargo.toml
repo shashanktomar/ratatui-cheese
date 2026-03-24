@@ -1,0 +1,12 @@
+[package]
+name = "cheese-spinner"
+version = "0.1.0"
+description = "Bubbletea-inspired spinner widget for Ratatui"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ratatui = { workspace = true }
+cheese-core = { workspace = true }
