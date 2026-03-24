@@ -1,5 +1,5 @@
 [package]
-name = "cheese-showcase"
+name = "showcase"
 version = "0.0.0"
 description = "TUI showcase app for ratatui-cheese widgets"
 
@@ -8,7 +8,6 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-cheese-core = { workspace = true }
-cheese-spinner = { workspace = true }
+ratatui-cheese = { workspace = true }
 ratatui = { workspace = true }
 crossterm = { workspace = true }

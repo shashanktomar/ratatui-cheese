@@ -236,13 +236,16 @@ impl StatefulWidget for &MyWidget<'_> {
 
 ## File Organization
 
-For simple widgets, everything can live in `lib.rs`. For complex widgets, split:
+All widgets live as modules in `crates/ratatui-cheese/src/`. For simple widgets, a single file is enough:
 
 ```
-src/
-├── lib.rs          # Re-exports: pub mod widget; pub use widget::MyWidget;
-├── widget.rs       # Widget struct, builder, Widget/Styled impls
-└── state.rs        # State struct (if StatefulWidget)
+crates/ratatui-cheese/src/
+├── lib.rs          # pub mod spinner; pub mod list; etc.
+├── spinner.rs      # Simple widget — everything in one file
+└── list/           # Complex widget — split into submodules
+    ├── mod.rs
+    ├── item.rs
+    └── state.rs
 ```
 
 ## Imports Cheat Sheet

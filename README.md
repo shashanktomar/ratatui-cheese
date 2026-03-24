@@ -19,7 +19,7 @@ Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line,
 
 <!-- TODO: Add screenshot -->
 
-[Usage & docs](crates/cheese-spinner/README.md)
+[Usage & docs](crates/ratatui-cheese/README.md#spinner)
 
 ## Contributing
 

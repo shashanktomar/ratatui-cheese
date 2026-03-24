@@ -114,31 +114,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "cheese-core"
-version = "0.1.0"
-dependencies = [
- "ratatui",
-]
-
-[[package]]
-name = "cheese-showcase"
-version = "0.0.0"
-dependencies = [
- "cheese-core",
- "cheese-spinner",
- "crossterm",
- "ratatui",
-]
-
-[[package]]
-name = "cheese-spinner"
-version = "0.1.0"
-dependencies = [
- "cheese-core",
- "ratatui",
-]
-
-[[package]]
 name = "compact_str"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -929,6 +904,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ratatui-cheese"
+version = "0.1.0"
+dependencies = [
+ "ratatui",
+]
+
+[[package]]
 name = "ratatui-core"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1135,6 +1117,15 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "showcase"
+version = "0.0.0"
+dependencies = [
+ "crossterm",
+ "ratatui",
+ "ratatui-cheese",
 ]
 
 [[package]]

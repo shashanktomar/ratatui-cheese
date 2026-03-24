@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/cheese-core", "crates/cheese-showcase", "crates/cheese-spinner"]
+members = ["crates/ratatui-cheese", "crates/showcase"]
 
 [workspace.package]
 edition = "2024"
@@ -10,5 +10,4 @@ license = "MIT"
 [workspace.dependencies]
 ratatui = "0.30"
 crossterm = "0.29"
-cheese-core = { path = "crates/cheese-core" }
-cheese-spinner = { path = "crates/cheese-spinner" }
+ratatui-cheese = { path = "crates/ratatui-cheese" }

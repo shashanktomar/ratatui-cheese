@@ -1,18 +1,19 @@
 ---
 name: create-widget
-description: Create a new widget crate in the ratatui-cheese project. Use this skill whenever the user wants to add a new widget, component, or UI element to the project. Also trigger when the user mentions creating a spinner, list, input, textarea, button, or any TUI component, or says things like "add a new widget", "create a component", "build a new crate". Even if the user just says something like "let's do a spinner next" in the context of this project, use this skill.
+description: Create a new widget module in the ratatui-cheese project. Use this skill whenever the user wants to add a new widget, component, or UI element to the project. Also trigger when the user mentions creating a spinner, list, input, textarea, button, or any TUI component, or says things like "add a new widget", "create a component", "build a new module". Even if the user just says something like "let's do a spinner next" in the context of this project, use this skill.
 ---
 
 # Create Widget
 
-This skill guides you through creating a new widget crate in the ratatui-cheese project — a Bubbletea-inspired component library for Ratatui.
+This skill guides you through creating a new widget module in the ratatui-cheese project — a Bubbletea-inspired component library for Ratatui.
 
 ## Project Context
 
 ratatui-cheese is a Rust workspace with:
-- `crates/cheese-core/` — shared traits and utilities
-- `crates/cheese-showcase/` — TUI demo app showing all widgets
-- `crates/cheese-<widget>/` — one crate per widget (the pattern you're creating)
+- `crates/ratatui-cheese/` — the main library crate, one module per widget
+- `crates/showcase/` — TUI demo app showing all widgets
+
+All widgets live as modules inside `crates/ratatui-cheese/src/`. Users import as `use ratatui_cheese::<widget>::*`.
 
 Reference implementations live in `.ref/code/` (ratatui, bubbles, bubbletea) — consult them for design inspiration. The `project-manifest.yaml` lists these repos.
 
@@ -42,43 +43,16 @@ Before writing code, get clear on what the widget does:
    - **Proposed Rust API** — show the equivalent struct, builder methods, trait impls, and state
    - **Differences & tradeoffs** — call out anything you're adding (e.g., `block()`) or dropping, and why. Don't blindly copy the widget-patterns template — if the Bubbles original doesn't have a concept (like Block wrapping), don't add it just because the template says to. Fidelity to the original trumps template defaults.
 
-### Phase 2: Scaffold the Crate
+### Phase 2: Add the Module
 
-Create the crate structure:
+Create a new file at `crates/ratatui-cheese/src/<widget>.rs` and re-export it from `lib.rs`:
 
-```
-crates/cheese-<name>/
-├── Cargo.toml
-└── src/
-    └── lib.rs
+```rust
+// In crates/ratatui-cheese/src/lib.rs, add:
+pub mod <widget>;
 ```
 
-**Cargo.toml** — use workspace inheritance:
-```toml
-[package]
-name = "cheese-<name>"
-version = "0.1.0"
-description = "<One-line description>"
-
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-
-[dependencies]
-ratatui = { workspace = true }
-cheese-core = { workspace = true }
-```
-
-**Update root Cargo.toml** — add the new crate to `workspace.members` and `workspace.dependencies`:
-```toml
-[workspace]
-members = [..., "crates/cheese-<name>"]
-
-[workspace.dependencies]
-cheese-<name> = { path = "crates/cheese-<name>" }
-```
-
-Run `cargo check --all-targets` to verify the scaffold compiles.
+No new crate, no Cargo.toml changes. Run `cargo check --all-targets` to verify it compiles.
 
 ### Phase 3: Implement the Widget
 
@@ -99,7 +73,7 @@ Read `references/widget-tests.md` for testing patterns.
 Use ratatui's `Buffer`-based snapshot testing: render the widget into a buffer and compare against expected output. Cover at minimum:
 - Empty/zero-size area
 - Basic render
-- Render with block
+- Render with block (if applicable)
 - Render with styling
 - Any widget-specific behavior
 
@@ -107,17 +81,15 @@ Use ratatui's `Buffer`-based snapshot testing: render the widget into a buffer a
 
 Read `references/showcase-integration.md` for how to integrate into the demo app.
 
-Add the widget to `cheese-showcase` so users can see it in action via `just showcase`.
+Add the widget to `showcase` so users can see it in action via `just showcase`.
 
-### Phase 6: Write Crate README & Update Repo README
+### Phase 6: Update READMEs
 
-Read `references/widget-readme.md` for the README template.
+Read `references/widget-readme.md` for the template.
 
-Each widget crate gets a short README with description, usage example, and screenshot placeholder.
-
-Also update the **root `README.md`** to list the new widget:
-- Add a screenshot of the widget (placeholder if not yet captured)
-- Add a link to the widget crate's own README for detailed usage
+Add a section for the new widget in:
+- `crates/ratatui-cheese/README.md` — usage example
+- Root `README.md` — screenshot placeholder and link
 
 ### Phase 7: Verify
 

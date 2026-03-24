@@ -45,7 +45,7 @@ s = "job:showcase"
 # ==================================================================
 
 [jobs.showcase]
-command = ["cargo", "run", "-p", "cheese-showcase"]
+command = ["cargo", "run", "-p", "showcase"]
 need_stdout = true
 allow_warnings = true
 background = true

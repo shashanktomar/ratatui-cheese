@@ -1,4 +1,4 @@
-//! Bubbletea-inspired spinner widget for Ratatui.
+//! Bubbletea-inspired spinner widget.
 //!
 //! A spinner cycles through frames of characters to indicate loading or progress.
 //! Includes all 12 preset spinner types from Charmbracelet's Bubbles library with
@@ -7,7 +7,7 @@
 //! # Example
 //!
 //! ```rust
-//! use cheese_spinner::{Spinner, SpinnerState, SpinnerType};
+//! use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 //! use ratatui::style::{Color, Style};
 //!
 //! let spinner = Spinner::new(SpinnerType::Dot)
@@ -100,7 +100,7 @@ impl Default for SpinnerType {
 /// # Example
 ///
 /// ```rust
-/// use cheese_spinner::{Spinner, SpinnerType};
+/// use ratatui_cheese::spinner::{Spinner, SpinnerType};
 /// use ratatui::style::{Color, Style};
 ///
 /// let spinner = Spinner::new(SpinnerType::Dot)

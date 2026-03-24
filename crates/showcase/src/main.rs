@@ -1,13 +1,13 @@
 use std::io;
 use std::time::{Duration, Instant};
 
-use cheese_spinner::{Spinner, SpinnerState, SpinnerType};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Padding, Widget};
 use ratatui::{DefaultTerminal, Frame};
+use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 
 // -- Widget registry --
 // Each widget in the showcase gets an entry here. As new widgets are added,
@@ -17,33 +17,46 @@ const WIDGETS: &[&str] = &["Spinner"];
 
 // -- Spinner config --
 
-const SPINNERS: &[SpinnerType] = &[
-    SpinnerType::Line,
-    SpinnerType::Dot,
-    SpinnerType::MiniDot,
-    SpinnerType::Jump,
-    SpinnerType::Pulse,
-    SpinnerType::Points,
-    SpinnerType::Globe,
-    SpinnerType::Moon,
-    SpinnerType::Monkey,
-];
+struct SpinnerEntry {
+    name: &'static str,
+    spinner: Spinner,
+    interval: Duration,
+}
 
-fn spinner_name(t: SpinnerType) -> &'static str {
-    match t {
-        SpinnerType::Line => "Line",
-        SpinnerType::Dot => "Dot",
-        SpinnerType::MiniDot => "MiniDot",
-        SpinnerType::Jump => "Jump",
-        SpinnerType::Pulse => "Pulse",
-        SpinnerType::Points => "Points",
-        SpinnerType::Globe => "Globe",
-        SpinnerType::Moon => "Moon",
-        SpinnerType::Monkey => "Monkey",
-        SpinnerType::Meter => "Meter",
-        SpinnerType::Hamburger => "Hamburger",
-        SpinnerType::Ellipsis => "Ellipsis",
-    }
+fn spinner_entries() -> Vec<SpinnerEntry> {
+    let style = Style::default().fg(Color::Indexed(69));
+
+    let presets: &[(SpinnerType, &str)] = &[
+        (SpinnerType::Line, "Line"),
+        (SpinnerType::Dot, "Dot"),
+        (SpinnerType::MiniDot, "MiniDot"),
+        (SpinnerType::Jump, "Jump"),
+        (SpinnerType::Pulse, "Pulse"),
+        (SpinnerType::Points, "Points"),
+        (SpinnerType::Globe, "Globe"),
+        (SpinnerType::Moon, "Moon"),
+        (SpinnerType::Monkey, "Monkey"),
+        (SpinnerType::Meter, "Meter"),
+        (SpinnerType::Hamburger, "Hamburger"),
+        (SpinnerType::Ellipsis, "Ellipsis"),
+    ];
+
+    let mut entries: Vec<SpinnerEntry> = presets
+        .iter()
+        .map(|(t, name)| SpinnerEntry {
+            name,
+            spinner: Spinner::new(*t).style(style),
+            interval: t.interval(),
+        })
+        .collect();
+
+    entries.push(SpinnerEntry {
+        name: "Custom",
+        spinner: Spinner::custom(vec!["⠇", "⠸"]).style(Style::default().fg(Color::Indexed(212))),
+        interval: Duration::from_millis(300),
+    });
+
+    entries
 }
 
 // -- App state --
@@ -54,18 +67,17 @@ struct App {
 
     // Spinner state
     spinner_index: usize,
-    spinner: Spinner,
+    entries: Vec<SpinnerEntry>,
     spinner_state: SpinnerState,
     last_tick: Instant,
 }
 
 impl App {
     fn new() -> Self {
-        let spinner_type = SPINNERS[0];
         Self {
             selected_widget: 0,
             spinner_index: 0,
-            spinner: Spinner::new(spinner_type).style(Style::default().fg(Color::Indexed(69))),
+            entries: spinner_entries(),
             spinner_state: SpinnerState::default(),
             last_tick: Instant::now(),
         }
@@ -85,30 +97,33 @@ impl App {
 
     fn set_spinner(&mut self, index: usize) {
         self.spinner_index = index;
-        let spinner_type = SPINNERS[self.spinner_index];
-        self.spinner = Spinner::new(spinner_type).style(Style::default().fg(Color::Indexed(69)));
         self.spinner_state = SpinnerState::default();
         self.last_tick = Instant::now();
     }
 
     fn next_spinner(&mut self) {
-        let index = (self.spinner_index + 1) % SPINNERS.len();
+        let index = (self.spinner_index + 1) % self.entries.len();
         self.set_spinner(index);
     }
 
     fn prev_spinner(&mut self) {
         let index = if self.spinner_index == 0 {
-            SPINNERS.len() - 1
+            self.entries.len() - 1
         } else {
             self.spinner_index - 1
         };
         self.set_spinner(index);
     }
 
+    fn current_entry(&self) -> &SpinnerEntry {
+        &self.entries[self.spinner_index]
+    }
+
     fn tick(&mut self) {
-        let interval = SPINNERS[self.spinner_index].interval();
+        let interval = self.current_entry().interval;
         if self.last_tick.elapsed() >= interval {
-            self.spinner_state.tick(self.spinner.frames().len());
+            let frame_count = self.current_entry().spinner.frames().len();
+            self.spinner_state.tick(frame_count);
             self.last_tick = Instant::now();
         }
     }
@@ -202,11 +217,10 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
+    let entry = app.current_entry();
+
     let block = Block::bordered()
-        .title(format!(
-            " Spinner: {} ",
-            spinner_name(SPINNERS[app.spinner_index])
-        ))
+        .title(format!(" Spinner: {} ", entry.name))
         .padding(Padding::new(2, 2, 1, 1));
     let inner = block.inner(area);
     frame.render_widget(block, area);
@@ -216,15 +230,19 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
     }
 
     // Spinner + "Spinning..." on the first line
-    let spinner_type = SPINNERS[app.spinner_index];
-    let gap = if matches!(spinner_type, SpinnerType::Dot) { "" } else { " " };
+    // Dot spinner has trailing space in frames, so no extra gap needed
+    let is_dot = entry.name == "Dot";
+    let gap = if is_dot { "" } else { " " };
 
     let spinner_area = Rect::new(inner.x, inner.y, 10, 1);
-    frame.render_stateful_widget(&app.spinner, spinner_area, &mut app.spinner_state.clone());
+    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut app.spinner_state.clone());
 
-    let frames = app.spinner.frames();
-    let frame_str = frames[app.spinner_state.frame() % frames.len()];
-    let spinner_width = unicode_display_width(frame_str);
+    let frames = entry.spinner.frames();
+    let spinner_width = frames
+        .iter()
+        .map(|f| unicode_display_width(f))
+        .max()
+        .unwrap_or(0);
     let text_x = inner.x + spinner_width + gap.len() as u16;
     let text = Span::styled("Spinning...", Style::default().fg(Color::Indexed(252)));
     let text_area = Rect::new(
