@@ -1,9 +1,5 @@
 # ratatui-cheese
 
-[![CI](https://github.com/shashanktomar/ratatui-cheese/actions/workflows/ci.yml/badge.svg)](https://github.com/shashanktomar/ratatui-cheese/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/ratatui-cheese)](https://crates.io/crates/ratatui-cheese)
-[![License: MIT](https://img.shields.io/crates/l/ratatui-cheese)](https://github.com/shashanktomar/ratatui-cheese/blob/main/LICENSE)
-
 Bubbletea-inspired widgets for [Ratatui](https://github.com/ratatui/ratatui). Bringing the ergonomics of [Charm's Bubbles](https://github.com/charmbracelet/bubbles) to the Rust TUI ecosystem.
 
 ## Usage
