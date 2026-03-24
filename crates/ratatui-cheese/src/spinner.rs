@@ -7,14 +7,17 @@
 //! # Example
 //!
 //! ```rust
+//! use std::time::Duration;
 //! use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 //! use ratatui::style::{Color, Style};
 //!
-//! let spinner = Spinner::new(SpinnerType::Dot)
+//! let spinner = Spinner::default()
 //!     .style(Style::default().fg(Color::Blue));
 //!
-//! let mut state = SpinnerState::default();
-//! // In your event loop, call state.tick() at spinner.spinner_type().interval()
+//! let mut state = SpinnerState::new(SpinnerType::Dot);
+//!
+//! // In your event loop, pass elapsed time — state handles frame timing:
+//! state.tick(Duration::from_millis(16));
 //! ```
 
 use std::time::Duration;
@@ -50,7 +53,7 @@ impl SpinnerType {
     pub fn frames(&self) -> &'static [&'static str] {
         match self {
             Self::Line => &["|", "/", "-", "\\"],
-            Self::Dot => &["⣾ ", "⣽ ", "⣻ ", "⢿ ", "⡿ ", "⣟ ", "⣯ ", "⣷ "],
+            Self::Dot => &["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
             Self::MiniDot => &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
             Self::Jump => &["⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"],
             Self::Pulse => &["█", "▓", "▒", "░"],
@@ -92,67 +95,31 @@ impl Default for SpinnerType {
     }
 }
 
-/// A spinner widget that cycles through frames to indicate activity.
+/// A spinner widget that renders the current frame from [`SpinnerState`].
 ///
-/// The spinner is configured with a [`SpinnerType`] preset (or custom frames) and a
-/// [`Style`]. It renders the current frame from [`SpinnerState`] into the buffer.
+/// `Spinner` is purely an appearance configuration — style and rendering.
+/// The spinner type, frames, and animation timing live in [`SpinnerState`].
 ///
 /// # Example
 ///
 /// ```rust
-/// use ratatui_cheese::spinner::{Spinner, SpinnerType};
+/// use ratatui_cheese::spinner::Spinner;
 /// use ratatui::style::{Color, Style};
 ///
-/// let spinner = Spinner::new(SpinnerType::Dot)
+/// let spinner = Spinner::default()
 ///     .style(Style::default().fg(Color::Blue));
 /// ```
 #[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 pub struct Spinner {
-    spinner_type: SpinnerType,
-    custom_frames: Option<Vec<&'static str>>,
     style: Style,
 }
 
 impl Spinner {
-    /// Creates a new spinner with the given preset type.
-    pub fn new(spinner_type: SpinnerType) -> Self {
-        Self {
-            spinner_type,
-            custom_frames: None,
-            style: Style::default(),
-        }
-    }
-
-    /// Creates a spinner with custom frames.
-    ///
-    /// Use this when none of the presets fit. The interval defaults to 100ms;
-    /// the caller controls tick timing.
-    pub fn custom(frames: Vec<&'static str>) -> Self {
-        Self {
-            spinner_type: SpinnerType::Line, // unused when custom_frames is Some
-            custom_frames: Some(frames),
-            style: Style::default(),
-        }
-    }
-
     /// Sets the style for the spinner frame.
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn style<S: Into<Style>>(mut self, style: S) -> Self {
         self.style = style.into();
         self
-    }
-
-    /// Returns the spinner type.
-    pub fn spinner_type(&self) -> SpinnerType {
-        self.spinner_type
-    }
-
-    /// Returns the frames this spinner uses.
-    pub fn frames(&self) -> &[&'static str] {
-        match &self.custom_frames {
-            Some(frames) => frames,
-            None => self.spinner_type.frames(),
-        }
     }
 }
 
@@ -170,28 +137,108 @@ impl Styled for Spinner {
 
 /// Mutable state for a [`Spinner`] widget.
 ///
-/// Tracks the current frame index. Call [`tick()`](SpinnerState::tick) to advance
-/// to the next frame — typically on a timer matching [`SpinnerType::interval()`].
-#[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
+/// Owns the spinner type, frames, and an internal time accumulator.
+/// Pass elapsed time to [`tick()`](SpinnerState::tick) and the state
+/// advances frames automatically at the correct interval.
+///
+/// # Example
+///
+/// ```rust
+/// use std::time::Duration;
+/// use ratatui_cheese::spinner::{SpinnerState, SpinnerType};
+///
+/// let mut state = SpinnerState::new(SpinnerType::Dot);
+/// state.tick(Duration::from_millis(200)); // advances frames as needed
+/// ```
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SpinnerState {
+    spinner_type: SpinnerType,
+    custom_frames: Option<Vec<&'static str>>,
+    custom_interval: Option<Duration>,
     frame: usize,
+    elapsed: Duration,
 }
 
 impl SpinnerState {
+    /// Creates a new state with the given spinner preset.
+    pub fn new(spinner_type: SpinnerType) -> Self {
+        Self {
+            spinner_type,
+            custom_frames: None,
+            custom_interval: None,
+            frame: 0,
+            elapsed: Duration::ZERO,
+        }
+    }
+
+    /// Creates a state with custom frames and interval.
+    pub fn custom(frames: Vec<&'static str>, interval: Duration) -> Self {
+        Self {
+            spinner_type: SpinnerType::Line,
+            custom_frames: Some(frames),
+            custom_interval: Some(interval),
+            frame: 0,
+            elapsed: Duration::ZERO,
+        }
+    }
+
+    /// Advances the spinner by the given elapsed time.
+    ///
+    /// Accumulates time internally and advances frames when the interval
+    /// is reached. Handles multiple frame advances if `dt` is large.
+    pub fn tick(&mut self, dt: Duration) {
+        let frame_count = self.frames().len();
+        if frame_count == 0 {
+            return;
+        }
+
+        let interval = self.interval();
+        if interval.is_zero() {
+            return;
+        }
+
+        self.elapsed += dt;
+        while self.elapsed >= interval {
+            self.elapsed -= interval;
+            self.frame = (self.frame + 1) % frame_count;
+        }
+    }
+
     /// Returns the current frame index.
     pub fn frame(&self) -> usize {
         self.frame
     }
 
-    /// Advances to the next frame, wrapping around at the end.
-    ///
-    /// `frame_count` is the total number of frames in the spinner.
-    /// Typically: `state.tick(spinner.frames().len())`
-    pub fn tick(&mut self, frame_count: usize) {
-        if frame_count == 0 {
-            return;
+    /// Returns the current frame string.
+    pub fn frame_str(&self) -> &str {
+        let frames = self.frames();
+        if frames.is_empty() {
+            return "";
         }
-        self.frame = (self.frame + 1) % frame_count;
+        frames[self.frame % frames.len()]
+    }
+
+    /// Returns the frames this spinner uses.
+    pub fn frames(&self) -> &[&'static str] {
+        match &self.custom_frames {
+            Some(frames) => frames,
+            None => self.spinner_type.frames(),
+        }
+    }
+
+    /// Returns the interval between frames.
+    pub fn interval(&self) -> Duration {
+        match self.custom_interval {
+            Some(interval) => interval,
+            None => self.spinner_type.interval(),
+        }
+    }
+}
+
+impl Default for SpinnerState {
+    /// Defaults to `SpinnerType::Line`.
+    fn default() -> Self {
+        Self::new(SpinnerType::default())
     }
 }
 
@@ -228,13 +275,10 @@ impl StatefulWidget for &Spinner {
             return;
         }
 
-        let frames = self.frames();
-        if frames.is_empty() {
+        let frame = state.frame_str();
+        if frame.is_empty() {
             return;
         }
-
-        let frame_idx = state.frame % frames.len();
-        let frame = frames[frame_idx];
 
         buf.set_string(area.x, area.y, frame, self.style);
     }
@@ -250,27 +294,30 @@ mod tests {
     // ---- Constructor & presets ----
 
     #[test]
-    fn default_spinner_is_line() {
-        let spinner = Spinner::default();
-        assert_eq!(spinner.spinner_type(), SpinnerType::Line);
+    fn default_state_is_line() {
+        let state = SpinnerState::default();
+        assert_eq!(state.frames(), SpinnerType::Line.frames());
+        assert_eq!(state.interval(), SpinnerType::Line.interval());
     }
 
     #[test]
     fn new_with_type() {
-        let spinner = Spinner::new(SpinnerType::Dot);
-        assert_eq!(spinner.spinner_type(), SpinnerType::Dot);
+        let state = SpinnerState::new(SpinnerType::Dot);
+        assert_eq!(state.frames(), SpinnerType::Dot.frames());
+        assert_eq!(state.interval(), SpinnerType::Dot.interval());
     }
 
     #[test]
-    fn custom_frames() {
-        let spinner = Spinner::custom(vec!["a", "b", "c"]);
-        assert_eq!(spinner.frames(), &["a", "b", "c"]);
+    fn custom_frames_and_interval() {
+        let state = SpinnerState::custom(vec!["a", "b", "c"], Duration::from_millis(200));
+        assert_eq!(state.frames(), &["a", "b", "c"]);
+        assert_eq!(state.interval(), Duration::from_millis(200));
     }
 
     #[test]
     fn style_builder() {
         let style = Style::default().fg(Color::Red);
-        let spinner = Spinner::new(SpinnerType::Line).style(style);
+        let spinner = Spinner::default().style(style);
         assert_eq!(Styled::style(&spinner), style);
     }
 
@@ -285,7 +332,7 @@ mod tests {
     fn preset_dot_frames() {
         assert_eq!(
             SpinnerType::Dot.frames(),
-            &["⣾ ", "⣽ ", "⣻ ", "⢿ ", "⡿ ", "⣟ ", "⣯ ", "⣷ "]
+            &["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
         );
     }
 
@@ -365,28 +412,55 @@ mod tests {
     // ---- State & tick ----
 
     #[test]
-    fn tick_advances_frame() {
-        let mut state = SpinnerState::default();
+    fn tick_advances_frame_after_interval() {
+        let mut state = SpinnerState::new(SpinnerType::Line); // 100ms interval
         assert_eq!(state.frame(), 0);
-        state.tick(4);
+
+        // Not enough time — no advance
+        state.tick(Duration::from_millis(50));
+        assert_eq!(state.frame(), 0);
+
+        // Now enough — advances
+        state.tick(Duration::from_millis(50));
         assert_eq!(state.frame(), 1);
-        state.tick(4);
-        assert_eq!(state.frame(), 2);
+    }
+
+    #[test]
+    fn tick_skips_frames_on_large_dt() {
+        let mut state = SpinnerState::new(SpinnerType::Line); // 100ms, 4 frames
+        state.tick(Duration::from_millis(250));
+        assert_eq!(state.frame(), 2); // skipped 0→1→2
     }
 
     #[test]
     fn tick_wraps_around() {
-        let mut state = SpinnerState::default();
-        for _ in 0..4 {
-            state.tick(4);
-        }
-        assert_eq!(state.frame(), 0);
+        let mut state = SpinnerState::new(SpinnerType::Line); // 4 frames
+        state.tick(Duration::from_millis(400));
+        assert_eq!(state.frame(), 0); // wrapped
     }
 
     #[test]
-    fn tick_zero_frame_count_is_noop() {
-        let mut state = SpinnerState::default();
-        state.tick(0);
+    fn tick_accumulates_remainder() {
+        let mut state = SpinnerState::new(SpinnerType::Line); // 100ms
+        state.tick(Duration::from_millis(150)); // frame 1, 50ms remainder
+        assert_eq!(state.frame(), 1);
+
+        state.tick(Duration::from_millis(60)); // 50+60=110ms >= 100ms → frame 2
+        assert_eq!(state.frame(), 2);
+    }
+
+    #[test]
+    fn frame_str_returns_current() {
+        let mut state = SpinnerState::new(SpinnerType::Line);
+        assert_eq!(state.frame_str(), "|");
+        state.tick(Duration::from_millis(100));
+        assert_eq!(state.frame_str(), "/");
+    }
+
+    #[test]
+    fn tick_empty_frames_is_noop() {
+        let mut state = SpinnerState::custom(vec![], Duration::from_millis(100));
+        state.tick(Duration::from_millis(200));
         assert_eq!(state.frame(), 0);
     }
 
@@ -402,7 +476,7 @@ mod tests {
 
     #[test]
     fn render_empty_area() {
-        let spinner = Spinner::new(SpinnerType::Line);
+        let spinner = Spinner::default();
         let mut state = SpinnerState::default();
         let mut buf = Buffer::empty(Rect::new(0, 0, 0, 0));
         StatefulWidget::render(&spinner, buf.area, &mut buf, &mut state);
@@ -411,17 +485,17 @@ mod tests {
 
     #[test]
     fn render_first_frame() {
-        let spinner = Spinner::new(SpinnerType::Line);
-        let mut state = SpinnerState::default();
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Line);
         let expected = Buffer::with_lines(["|  "]);
         assert_renders_stateful(&spinner, &mut state, &expected);
     }
 
     #[test]
     fn render_second_frame_after_tick() {
-        let spinner = Spinner::new(SpinnerType::Line);
-        let mut state = SpinnerState::default();
-        state.tick(spinner.frames().len());
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Line);
+        state.tick(Duration::from_millis(100));
         let expected = Buffer::with_lines(["/  "]);
         assert_renders_stateful(&spinner, &mut state, &expected);
     }
@@ -429,8 +503,8 @@ mod tests {
     #[test]
     fn render_with_style() {
         let style = Style::default().fg(Color::Red);
-        let spinner = Spinner::new(SpinnerType::Pulse).style(style);
-        let mut state = SpinnerState::default();
+        let spinner = Spinner::default().style(style);
+        let mut state = SpinnerState::new(SpinnerType::Pulse);
         let area = Rect::new(0, 0, 3, 1);
         let mut buf = Buffer::empty(area);
         StatefulWidget::render(&spinner, area, &mut buf, &mut state);
@@ -440,7 +514,7 @@ mod tests {
 
     #[test]
     fn render_stateless_shows_frame_zero() {
-        let spinner = Spinner::new(SpinnerType::Line);
+        let spinner = Spinner::default();
         let expected = Buffer::with_lines(["|  "]);
         let mut actual = Buffer::empty(Rect::new(0, 0, 3, 1));
         Widget::render(&spinner, actual.area, &mut actual);
@@ -449,40 +523,40 @@ mod tests {
 
     #[test]
     fn render_dot_braille() {
-        let spinner = Spinner::new(SpinnerType::Dot);
-        let mut state = SpinnerState::default();
-        let expected = Buffer::with_lines(["⣾ "]);
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Dot);
+        let expected = Buffer::with_lines(["⣾ "]); // braille char + trailing space from buffer
         assert_renders_stateful(&spinner, &mut state, &expected);
     }
 
     #[test]
     fn render_points_multichar() {
-        let spinner = Spinner::new(SpinnerType::Points);
-        let mut state = SpinnerState::default();
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Points);
         let expected = Buffer::with_lines(["∙∙∙  "]);
         assert_renders_stateful(&spinner, &mut state, &expected);
     }
 
     #[test]
     fn render_ellipsis_empty_first_frame() {
-        let spinner = Spinner::new(SpinnerType::Ellipsis);
-        let mut state = SpinnerState::default();
-        // First frame is empty string — buffer should remain blank
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Ellipsis);
         let expected = Buffer::with_lines(["   "]);
         assert_renders_stateful(&spinner, &mut state, &expected);
     }
 
     #[test]
     fn render_cycles_all_line_frames() {
-        let spinner = Spinner::new(SpinnerType::Line);
-        let mut state = SpinnerState::default();
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Line);
         let frames = ["|", "/", "-", "\\"];
+        let interval = SpinnerType::Line.interval();
         for expected_frame in &frames {
             let area = Rect::new(0, 0, 3, 1);
             let mut buf = Buffer::empty(area);
             StatefulWidget::render(&spinner, area, &mut buf, &mut state);
             assert_eq!(buf[(0, 0)].symbol(), *expected_frame);
-            state.tick(spinner.frames().len());
+            state.tick(interval);
         }
     }
 }

@@ -5,7 +5,7 @@
 //! Run with: cargo run --example spinners
 
 use std::io;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::layout::Rect;
@@ -38,8 +38,8 @@ impl Model {
     fn new() -> Self {
         let mut m = Self {
             index: 0,
-            spinner: Spinner::default(),
-            state: SpinnerState::default(),
+            spinner: Spinner::default().style(Style::default().fg(Color::Indexed(69))),
+            state: SpinnerState::new(SPINNERS[0]),
             last_tick: Instant::now(),
         };
         m.reset_spinner();
@@ -47,18 +47,16 @@ impl Model {
     }
 
     fn reset_spinner(&mut self) {
-        self.spinner =
-            Spinner::new(SPINNERS[self.index]).style(Style::default().fg(Color::Indexed(69)));
-        self.state = SpinnerState::default();
+        self.spinner = Spinner::default().style(Style::default().fg(Color::Indexed(69)));
+        self.state = SpinnerState::new(SPINNERS[self.index]);
         self.last_tick = Instant::now();
     }
 
     fn tick(&mut self) {
-        let interval = SPINNERS[self.index].interval();
-        if self.last_tick.elapsed() >= interval {
-            self.state.tick(self.spinner.frames().len());
-            self.last_tick = Instant::now();
-        }
+        let now = Instant::now();
+        let dt = now - self.last_tick;
+        self.last_tick = now;
+        self.state.tick(dt);
     }
 }
 
@@ -77,7 +75,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
 
         m.tick();
 
-        if event::poll(Duration::from_millis(16))?
+        if event::poll(std::time::Duration::from_millis(16))?
             && let Event::Key(key) = event::read()?
             && key.kind == KeyEventKind::Press
         {
@@ -105,16 +103,14 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
 fn view(frame: &mut Frame, m: &Model) {
     let area = frame.area();
 
-    // Dot frames have a trailing space, so no extra gap
-    let gap: u16 = if m.index == 1 { 0 } else { 1 };
+    let gap: u16 = 1;
 
     // Render spinner at row 1, col 1 (matching the leading \n and space in Go)
     let spinner_area = Rect::new(1, 1, 10, 1);
     frame.render_stateful_widget(&m.spinner, spinner_area, &mut m.state.clone());
 
     // "Spinning..." text right after the spinner
-    let frames = m.spinner.frames();
-    let frame_str = frames[m.state.frame() % frames.len()];
+    let frame_str = m.state.frame_str();
     let spinner_width = Line::raw(frame_str).width() as u16;
     let text_x = 1 + spinner_width + gap;
     let text = Span::styled("Spinning...", Style::default().fg(Color::Indexed(252)));

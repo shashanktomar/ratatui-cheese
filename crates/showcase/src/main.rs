@@ -19,8 +19,8 @@ const WIDGETS: &[&str] = &["Spinner"];
 
 struct SpinnerEntry {
     name: &'static str,
+    state: SpinnerState,
     spinner: Spinner,
-    interval: Duration,
 }
 
 fn spinner_entries() -> Vec<SpinnerEntry> {
@@ -45,15 +45,15 @@ fn spinner_entries() -> Vec<SpinnerEntry> {
         .iter()
         .map(|(t, name)| SpinnerEntry {
             name,
-            spinner: Spinner::new(*t).style(style),
-            interval: t.interval(),
+            state: SpinnerState::new(*t),
+            spinner: Spinner::default().style(style),
         })
         .collect();
 
     entries.push(SpinnerEntry {
         name: "Custom",
-        spinner: Spinner::custom(vec!["⠇", "⠸"]).style(Style::default().fg(Color::Indexed(212))),
-        interval: Duration::from_millis(300),
+        state: SpinnerState::custom(vec!["⠇", "⠸"], Duration::from_millis(300)),
+        spinner: Spinner::default().style(Style::default().fg(Color::Indexed(212))),
     });
 
     entries
@@ -68,7 +68,6 @@ struct App {
     // Spinner state
     spinner_index: usize,
     entries: Vec<SpinnerEntry>,
-    spinner_state: SpinnerState,
     last_tick: Instant,
 }
 
@@ -78,7 +77,6 @@ impl App {
             selected_widget: 0,
             spinner_index: 0,
             entries: spinner_entries(),
-            spinner_state: SpinnerState::default(),
             last_tick: Instant::now(),
         }
     }
@@ -97,7 +95,6 @@ impl App {
 
     fn set_spinner(&mut self, index: usize) {
         self.spinner_index = index;
-        self.spinner_state = SpinnerState::default();
         self.last_tick = Instant::now();
     }
 
@@ -120,12 +117,10 @@ impl App {
     }
 
     fn tick(&mut self) {
-        let interval = self.current_entry().interval;
-        if self.last_tick.elapsed() >= interval {
-            let frame_count = self.current_entry().spinner.frames().len();
-            self.spinner_state.tick(frame_count);
-            self.last_tick = Instant::now();
-        }
+        let now = Instant::now();
+        let dt = now - self.last_tick;
+        self.last_tick = now;
+        self.entries[self.spinner_index].state.tick(dt);
     }
 }
 
@@ -230,14 +225,12 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
     }
 
     // Spinner + "Spinning..." on the first line
-    // Dot spinner has trailing space in frames, so no extra gap needed
-    let is_dot = entry.name == "Dot";
-    let gap = if is_dot { "" } else { " " };
+    let gap = " ";
 
     let spinner_area = Rect::new(inner.x, inner.y, 10, 1);
-    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut app.spinner_state.clone());
+    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut entry.state.clone());
 
-    let frames = entry.spinner.frames();
+    let frames = entry.state.frames();
     let spinner_width = frames
         .iter()
         .map(|f| unicode_display_width(f))
