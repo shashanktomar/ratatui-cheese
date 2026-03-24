@@ -29,7 +29,7 @@ Run the showcase to see all widgets in action:
 just showcase
 ```
 
-Run individual examples (matching the Bubbletea examples):
+Run individual examples:
 
 ```sh
 just example spinners

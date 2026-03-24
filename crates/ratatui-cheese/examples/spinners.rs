@@ -95,17 +95,12 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
     }
 }
 
-/// Matches the Go View() output:
-///
-///  [spinner][gap]Spinning...
-///
-/// h/l, ←/→: change spinner • q: exit
 fn view(frame: &mut Frame, m: &Model) {
     let area = frame.area();
 
     let gap: u16 = 1;
 
-    // Render spinner at row 1, col 1 (matching the leading \n and space in Go)
+    // Render spinner
     let spinner_area = Rect::new(1, 1, 10, 1);
     frame.render_stateful_widget(&m.spinner, spinner_area, &mut m.state.clone());
 
@@ -117,7 +112,7 @@ fn view(frame: &mut Frame, m: &Model) {
     let text_area = Rect::new(text_x, 1, area.width.saturating_sub(text_x), 1);
     Widget::render(text, text_area, frame.buffer_mut());
 
-    // Help text at row 3 (matching the \n\n gap in Go)
+    // Help text
     let help = Line::from(Span::styled(
         "h/l, ←/→: change spinner • q: exit",
         Style::default().fg(Color::Indexed(241)),
