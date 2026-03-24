@@ -1,6 +1,7 @@
 [package]
 name = "showcase"
 version = "0.0.0"
+publish = false
 description = "TUI showcase app for ratatui-cheese widgets"
 
 authors.workspace = true

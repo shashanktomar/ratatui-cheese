@@ -86,13 +86,23 @@ test $RUST_BACKTRACE="1":
 [group('test-and-lint')]
 lint:
 	cargo fmt --check
-	cargo clippy --all-targets
+	cargo clippy --all-targets -- -D warnings
 
 # Auto-fix formatting and clippy warnings
 [group('test-and-lint')]
 fix:
 	cargo fmt
-	cargo clippy --fix # Note that --fix implies --all-targets
+	cargo clippy --fix -- -D warnings # Note that --fix implies --all-targets
+
+# Run all CI checks: check, lint, and test (no nextest dependency)
+[group('dev')]
+ci: check lint
+	cargo test --workspace
+
+# Publish ratatui-cheese to crates.io (runs CI checks first)
+[group('dev')]
+publish: ci
+	cargo publish -p ratatui-cheese
 
 # Search for #[allow(dead_code)] occurrences
 [group('test-and-lint')]
