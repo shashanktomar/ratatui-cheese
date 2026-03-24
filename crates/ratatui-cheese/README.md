@@ -36,6 +36,8 @@ last_tick = now;
 frame.render_stateful_widget(&spinner, area, &mut state);
 ```
 
+![Spinners](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/spinners.gif)
+
 See it in action (a direct port of the [Bubbletea spinners example](https://github.com/charmbracelet/bubbletea/tree/main/examples/spinners)):
 
 ```sh

@@ -8,6 +8,7 @@ Thanks for your interest in contributing! This guide will help you get set up an
 - [just](https://github.com/casey/just) — command runner
 - [nushell](https://www.nushell.sh/) — used for tooling scripts
 - [gum](https://github.com/charmbracelet/gum) — terminal UI for scripts
+- [vhs](https://github.com/charmbracelet/vhs) — terminal GIF recorder for docs
 
 ## Getting Started
 

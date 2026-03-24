@@ -9,6 +9,13 @@ use ratatui::widgets::{Block, Padding, Widget};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 
+// -- Colors --
+
+const COLOR_ACCENT: Color = Color::Indexed(69);
+const COLOR_TEXT: Color = Color::Indexed(252);
+const COLOR_HELP: Color = Color::Indexed(241);
+const COLOR_CUSTOM_ACCENT: Color = Color::Indexed(212);
+
 // -- Widget registry --
 // Each widget in the showcase gets an entry here. As new widgets are added,
 // just append to this list.
@@ -24,7 +31,7 @@ struct SpinnerEntry {
 }
 
 fn spinner_entries() -> Vec<SpinnerEntry> {
-    let style = Style::default().fg(Color::Indexed(69));
+    let style = Style::default().fg(COLOR_ACCENT);
 
     let presets: &[(SpinnerType, &str)] = &[
         (SpinnerType::Line, "Line"),
@@ -53,7 +60,7 @@ fn spinner_entries() -> Vec<SpinnerEntry> {
     entries.push(SpinnerEntry {
         name: "Custom",
         state: SpinnerState::custom(vec!["⠇", "⠸"], Duration::from_millis(300)),
-        spinner: Spinner::default().style(Style::default().fg(Color::Indexed(212))),
+        spinner: Spinner::default().style(Style::default().fg(COLOR_CUSTOM_ACCENT)),
     });
 
     entries
@@ -193,10 +200,10 @@ fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
         }
         let style = if i == app.selected_widget {
             Style::default()
-                .fg(Color::Indexed(69))
+                .fg(COLOR_ACCENT)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::Indexed(252))
+            Style::default().fg(COLOR_TEXT)
         };
         let prefix = if i == app.selected_widget { "▸ " } else { "  " };
         let line = Line::from(Span::styled(format!("{prefix}{name}"), style));
@@ -237,7 +244,7 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
         .max()
         .unwrap_or(0);
     let text_x = inner.x + spinner_width + gap.len() as u16;
-    let text = Span::styled("Spinning...", Style::default().fg(Color::Indexed(252)));
+    let text = Span::styled("Spinning...", Style::default().fg(COLOR_TEXT));
     let text_area = Rect::new(
         text_x,
         inner.y,
@@ -250,7 +257,7 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
     if inner.height > 2 {
         let help = Line::from(Span::styled(
             "h/l, ←/→: change spinner",
-            Style::default().fg(Color::Indexed(241)),
+            Style::default().fg(COLOR_HELP),
         ));
         let help_area = Rect::new(inner.x, inner.y + 2, inner.width, 1);
         help.render(help_area, frame.buffer_mut());

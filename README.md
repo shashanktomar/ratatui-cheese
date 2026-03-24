@@ -17,7 +17,7 @@ ratatui-cheese = "0.1"
 
 Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line, Dot, MiniDot, Jump, Pulse, Points, Globe, Moon, Monkey, Meter, Hamburger, Ellipsis.
 
-<!-- TODO: Add screenshot -->
+![Spinners](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/spinners.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#spinner)
 

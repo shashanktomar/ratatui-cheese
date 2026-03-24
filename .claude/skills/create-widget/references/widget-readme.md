@@ -1,6 +1,6 @@
 # Widget README Template
 
-This is the reference for Phase 6 of the create-widget skill. Each new widget gets a section in the crate README and root README.
+This is the reference for Phase 7 of the create-widget skill. Each new widget gets a section in the crate README and root README.
 
 ## Add to Crate README
 
@@ -19,6 +19,14 @@ let widget = <WidgetName>::new(/* args */)
 
 frame.render_widget(&widget, area);
 \```
+
+![<Widget Name>](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/<widget>.gif)
+
+See it in action:
+
+\```sh
+cargo run --example <widget>
+\```
 ```
 
 ## Update the Repo README
@@ -30,9 +38,11 @@ Also add an entry in the root `README.md` under "## Widgets":
 
 <One-line description.>
 
-<!-- TODO: Add screenshot -->
+![<Widget Name>](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/<widget>.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#<widget-name>)
 ```
 
-The root README is the first thing users see — it should showcase each widget with a screenshot and link to the crate README for detailed usage. Screenshots are a placeholder for now; we'll add a capture workflow later.
+## GIF Generation
+
+GIFs are generated with VHS from tape files in `tools/vhs/`. Run `just record <widget>` to generate the GIF locally. GIFs live on the `images` branch — push them there to make README images resolve.

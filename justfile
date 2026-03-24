@@ -29,6 +29,9 @@ setup:
 	command -v cargo-nextest >/dev/null || cargo install --locked cargo-nextest
 	command -v cargo-outdated >/dev/null || cargo install cargo-outdated
 
+	echo "🎬 Installing vhs..."
+	command -v vhs >/dev/null || brew install charmbracelet/tap/vhs
+
 	echo "📦 Syncing reference repos..."
 	just update-reference-repos
 
@@ -60,6 +63,15 @@ example name:
 [group('dev')]
 watch:
 	bacon
+
+##############################################
+################ Recording ###################
+##############################################
+
+# Generate a GIF recording from a VHS tape file (e.g. just record spinners)
+[group('recording')]
+record name:
+	vhs tools/vhs/{{name}}.tape
 
 ##############################################
 ################ Test & Lint #################
