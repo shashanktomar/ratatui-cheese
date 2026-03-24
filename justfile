@@ -47,9 +47,14 @@ check:
 all: check test lint dead-code
 
 # Run the showcase demo app
-[group('dev')]
+[group('examples')]
 showcase:
 	cargo run -p showcase
+
+# Run an example (e.g. just example spinners)
+[group('examples')]
+example name:
+	cargo run -p ratatui-cheese --example {{name}}
 
 # Start bacon watch tool for live feedback
 [group('dev')]

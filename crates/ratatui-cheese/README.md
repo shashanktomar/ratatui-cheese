@@ -33,6 +33,12 @@ frame.render_stateful_widget(&spinner, area, &mut state);
 state.tick(spinner.frames().len());
 ```
 
+See it in action (a direct port of the [Bubbletea spinners example](https://github.com/charmbracelet/bubbletea/tree/main/examples/spinners)):
+
+```sh
+cargo run --example spinners
+```
+
 ## License
 
 MIT

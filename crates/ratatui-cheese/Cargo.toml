@@ -9,3 +9,6 @@ license.workspace = true
 
 [dependencies]
 ratatui = { workspace = true }
+
+[dev-dependencies]
+crossterm = { workspace = true }

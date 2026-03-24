@@ -77,27 +77,34 @@ Use ratatui's `Buffer`-based snapshot testing: render the widget into a buffer a
 - Render with styling
 - Any widget-specific behavior
 
-### Phase 5: Add to Showcase
+### Phase 5: Write an Example
+
+If the Bubbles/Bubbletea repo has an example for this widget (check `.ref/code/bubbletea/examples/`), port it as a standalone example at `crates/ratatui-cheese/examples/<widget>.rs`.
+
+The example should be a direct port of the Go original — same layout, same keybindings, same colors. Keep it minimal and self-contained (~80-120 lines). Run with `just example <widget>`.
+
+### Phase 6: Add to Showcase
 
 Read `references/showcase-integration.md` for how to integrate into the demo app.
 
 Add the widget to `showcase` so users can see it in action via `just showcase`.
 
-### Phase 6: Update READMEs
+### Phase 7: Update READMEs
 
 Read `references/widget-readme.md` for the template.
 
 Add a section for the new widget in:
-- `crates/ratatui-cheese/README.md` — usage example
+- `crates/ratatui-cheese/README.md` — usage example and `cargo run --example <widget>` command
 - Root `README.md` — screenshot placeholder and link
 
-### Phase 7: Verify
+### Phase 8: Verify
 
 Run all quality gates before calling it done:
 
 ```bash
 just all    # check + test + lint + dead-code
 just showcase  # visually verify
+just example <widget>  # verify example matches Go original
 ```
 
 ## Reference Files
