@@ -83,7 +83,7 @@ If the Bubbles/Bubbletea repo has an example for this widget (check `.ref/code/b
 
 The example should be a direct port of the Go original — same layout, same keybindings, same colors. Keep it minimal and self-contained (~80-120 lines). Run with `just example <widget>`.
 
-Also create a VHS tape file at `tools/vhs/<widget>.tape` to record a GIF demo. Run with `just record <widget>`. The GIF goes on the `images` branch and is referenced in READMEs via raw GitHub URL.
+Also create a VHS tape file at `tools/vhs/<widget>.tape` to record a GIF demo. Run `just record <widget>` to generate the GIF locally, then **ask the user to review the GIF before pushing**. Only after they confirm it looks good, push it to the `images` branch. READMEs reference GIFs via raw GitHub URL from that branch.
 
 ### Phase 6: Add to Showcase
 

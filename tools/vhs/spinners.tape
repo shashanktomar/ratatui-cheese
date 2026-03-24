@@ -1,9 +1,15 @@
 Output spinners.gif
-Set Theme "Aardvark Blue"
-Set Width 800
-Set Height 200
+Set Theme "Catppuccin Mocha"
+Set FontSize 32
+Set Width 1200
+Set Height 300
+Set Framerate 30
+Set Padding 20
 Hide
-Type "cargo run --example spinners"
+Type "cargo build --example spinners 2>/dev/null"
+Enter
+Sleep 5s
+Type "cargo run --example spinners 2>/dev/null"
 Enter
 Sleep 1s
 Show
