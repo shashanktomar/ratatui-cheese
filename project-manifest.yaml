@@ -1,0 +1,19 @@
+# Project Manifest
+# This file contains project metadata and references
+
+references:
+  repos:
+    - name: ratatui
+      url: git@github.com:ratatui/ratatui.git
+      branch: main
+      description: "Ratatui - Rust library for rich terminal user interfaces"
+
+    - name: bubbles
+      url: git@github.com:charmbracelet/bubbles.git
+      branch: main
+      description: "Charm Bubbles - TUI components for Bubble Tea"
+
+    - name: bubbletea
+      url: git@github.com:charmbracelet/bubbletea.git
+      branch: main
+      description: "Charm Bubble Tea - Go framework for terminal apps"

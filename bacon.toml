@@ -1,0 +1,91 @@
+# Configuration for the bacon watch tool
+# Complete help: https://dystroy.org/bacon/config/
+
+default_job = "check"
+env.CARGO_TERM_COLOR = "always"
+
+# ==================================================================
+# ======================== Custom Tasks ============================
+# ==================================================================
+
+[jobs.check]
+command = ["just", "check"]
+need_stdout = false
+
+[jobs.lint]
+command = ["just", "lint"]
+need_stdout = false
+
+[jobs.dead-code]
+command = ["just", "dead-code"]
+need_stdout = true
+
+# ==================================================================
+# ========================= Keybindings ============================
+# ==================================================================
+
+[keybindings]
+
+# vim mode
+esc = "back"
+g = "scroll-to-top"
+shift-g = "scroll-to-bottom"
+k = "scroll-lines(-1)"
+j = "scroll-lines(1)"
+ctrl-u = "scroll-page(-1)"
+ctrl-d = "scroll-page(1)"
+
+c = "job:check"
+l = "job:lint"
+d = "job:dead-code"
+
+# ==================================================================
+# =============== Default Tasks Provided By Bacon ==================
+# ==================================================================
+
+[jobs.clippy-all]
+command = ["cargo", "clippy", "--all-targets"]
+need_stdout = false
+
+[jobs.test]
+command = ["cargo", "test"]
+need_stdout = true
+
+[jobs.nextest]
+command = [
+  "cargo",
+  "nextest",
+  "run",
+  "--hide-progress-bar",
+  "--failure-output",
+  "final",
+]
+need_stdout = true
+analyzer = "nextest"
+
+[jobs.doc]
+command = ["cargo", "doc", "--no-deps"]
+need_stdout = false
+
+[jobs.doc-open]
+command = ["cargo", "doc", "--no-deps", "--open"]
+need_stdout = false
+on_success = "back"
+
+[jobs.run]
+command = ["cargo", "run"]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-long]
+command = ["cargo", "run"]
+need_stdout = true
+allow_warnings = true
+background = false
+on_change_strategy = "kill_then_restart"
+
+[jobs.ex]
+command = ["cargo", "run", "--example"]
+need_stdout = true
+allow_warnings = true
