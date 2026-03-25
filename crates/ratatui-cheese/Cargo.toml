@@ -6,6 +6,7 @@ description = "Bubbletea-inspired widgets for Ratatui"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 ratatui = { workspace = true }

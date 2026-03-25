@@ -6,6 +6,7 @@ members = ["crates/ratatui-cheese", "crates/showcase"]
 edition = "2024"
 authors = ["Shashank Tomar <https://github.com/shashanktomar>"]
 license = "MIT"
+repository = "https://github.com/shashanktomar/ratatui-cheese"
 
 [workspace.dependencies]
 ratatui = "0.30"
