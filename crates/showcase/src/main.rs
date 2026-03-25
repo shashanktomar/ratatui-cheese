@@ -314,7 +314,7 @@ fn draw_help_detail(frame: &mut Frame, app: &App, area: Rect) {
 
     // Help widget
     let help = Help::new(&HelpKeys).show_all(app.help_show_all);
-    let help_height = if app.help_show_all { 4 } else { 1 };
+    let help_height = help.required_height();
     let help_area = Rect::new(inner.x, inner.y, inner.width, help_height.min(inner.height));
     Widget::render(&help, help_area, frame.buffer_mut());
 

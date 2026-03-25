@@ -281,6 +281,21 @@ impl Help {
         self
     }
 
+    /// Returns the number of rows the widget needs to render its content.
+    ///
+    /// In short mode this is always 1. In full mode it's the height of the
+    /// tallest binding group (i.e. the column with the most enabled bindings).
+    pub fn required_height(&self) -> u16 {
+        if !self.show_all {
+            return 1;
+        }
+        self.binding_groups
+            .iter()
+            .map(|group| group.iter().filter(|b| b.is_enabled()).count())
+            .max()
+            .unwrap_or(0) as u16
+    }
+
     /// Renders the short (single-line) help view into the buffer.
     fn render_short_help(&self, area: Rect, buf: &mut Buffer) {
         if area.is_empty() || self.bindings.is_empty() {
@@ -523,6 +538,29 @@ mod tests {
     }
 
     // === Help construction tests ===
+
+    #[test]
+    fn required_height_short() {
+        let help = Help::new(&TestKeyMap);
+        assert_eq!(help.required_height(), 1);
+    }
+
+    #[test]
+    fn required_height_full() {
+        let help = Help::new(&TestKeyMap).show_all(true);
+        // TestKeyMap: group 1 has 2 bindings, group 2 has 2 bindings → max = 2
+        assert_eq!(help.required_height(), 2);
+    }
+
+    #[test]
+    fn required_height_skips_disabled() {
+        let help = Help::default().show_all(true).binding_groups(vec![vec![
+            Binding::new("a", "one"),
+            Binding::new("b", "two").enabled(false),
+            Binding::new("c", "three"),
+        ]]);
+        assert_eq!(help.required_height(), 2);
+    }
 
     #[test]
     fn new_from_keymap() {

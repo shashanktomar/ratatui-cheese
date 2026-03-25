@@ -92,7 +92,6 @@ fn view(frame: &mut Frame, m: &Model) {
 
     // Help view below status
     let help = Help::new(&Keys).show_all(m.show_all);
-    let help_height = if m.show_all { 4 } else { 1 };
-    let help_area = Rect::new(0, 3, 40, help_height);
+    let help_area = Rect::new(0, 3, 40, help.required_height());
     Widget::render(&help, help_area, frame.buffer_mut());
 }
