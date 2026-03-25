@@ -1,6 +1,6 @@
 [package]
 name = "ratatui-cheese"
-version = "0.1.0"
+version = "0.2.0"
 description = "Bubbletea-inspired widgets for Ratatui"
 
 authors.workspace = true
