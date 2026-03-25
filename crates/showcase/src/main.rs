@@ -7,6 +7,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Padding, Widget};
 use ratatui::{DefaultTerminal, Frame};
+use ratatui_cheese::help::{Binding, Help, KeyMap};
 use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 
 // -- Colors --
@@ -20,7 +21,7 @@ const COLOR_CUSTOM_ACCENT: Color = Color::Indexed(212);
 // Each widget in the showcase gets an entry here. As new widgets are added,
 // just append to this list.
 
-const WIDGETS: &[&str] = &["Spinner"];
+const WIDGETS: &[&str] = &["Spinner", "Help"];
 
 // -- Spinner config --
 
@@ -68,6 +69,30 @@ fn spinner_entries() -> Vec<SpinnerEntry> {
 
 // -- App state --
 
+// -- Help config --
+
+struct HelpKeys;
+
+impl KeyMap for HelpKeys {
+    fn short_help(&self) -> Vec<Binding> {
+        vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")]
+    }
+
+    fn full_help(&self) -> Vec<Vec<Binding>> {
+        vec![
+            vec![
+                Binding::new("↑/k", "move up"),
+                Binding::new("↓/j", "move down"),
+                Binding::new("←/h", "move left"),
+                Binding::new("→/l", "move right"),
+            ],
+            vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")],
+        ]
+    }
+}
+
+// -- App state --
+
 struct App {
     // Widget list selection
     selected_widget: usize,
@@ -76,6 +101,9 @@ struct App {
     spinner_index: usize,
     entries: Vec<SpinnerEntry>,
     last_tick: Instant,
+
+    // Help state
+    help_show_all: bool,
 }
 
 impl App {
@@ -85,6 +113,7 @@ impl App {
             spinner_index: 0,
             entries: spinner_entries(),
             last_tick: Instant::now(),
+            help_show_all: false,
         }
     }
 
@@ -168,6 +197,11 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
                         app.prev_spinner();
                     }
                 }
+                KeyCode::Char('?') => {
+                    if WIDGETS[app.selected_widget] == "Help" {
+                        app.help_show_all = !app.help_show_all;
+                    }
+                }
                 _ => {}
             }
         }
@@ -213,8 +247,10 @@ fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
-    if WIDGETS[app.selected_widget] == "Spinner" {
-        draw_spinner_detail(frame, app, area);
+    match WIDGETS[app.selected_widget] {
+        "Spinner" => draw_spinner_detail(frame, app, area),
+        "Help" => draw_help_detail(frame, app, area),
+        _ => {}
     }
 }
 
@@ -261,6 +297,36 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
         ));
         let help_area = Rect::new(inner.x, inner.y + 2, inner.width, 1);
         help.render(help_area, frame.buffer_mut());
+    }
+}
+
+fn draw_help_detail(frame: &mut Frame, app: &App, area: Rect) {
+    let title = if app.help_show_all { " Help: Full " } else { " Help: Short " };
+    let block = Block::bordered()
+        .title(title)
+        .padding(Padding::new(2, 2, 1, 1));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    if inner.is_empty() {
+        return;
+    }
+
+    // Help widget
+    let help = Help::new(&HelpKeys).show_all(app.help_show_all);
+    let help_height = if app.help_show_all { 4 } else { 1 };
+    let help_area = Rect::new(inner.x, inner.y, inner.width, help_height.min(inner.height));
+    Widget::render(&help, help_area, frame.buffer_mut());
+
+    // Hint text
+    let hint_y = inner.y + help_height + 1;
+    if hint_y < inner.y + inner.height {
+        let hint = Line::from(Span::styled(
+            "?: toggle short/full help",
+            Style::default().fg(COLOR_HELP),
+        ));
+        let hint_area = Rect::new(inner.x, hint_y, inner.width, 1);
+        hint.render(hint_area, frame.buffer_mut());
     }
 }
 
