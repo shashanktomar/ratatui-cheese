@@ -71,7 +71,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
     let mut m = Model::new();
 
     loop {
-        terminal.draw(|frame| view(frame, &m))?;
+        terminal.draw(|frame| view(frame, &mut m))?;
 
         m.tick();
 
@@ -95,14 +95,14 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
     }
 }
 
-fn view(frame: &mut Frame, m: &Model) {
+fn view(frame: &mut Frame, m: &mut Model) {
     let area = frame.area();
 
     let gap: u16 = 1;
 
     // Render spinner
     let spinner_area = Rect::new(1, 1, 10, 1);
-    frame.render_stateful_widget(&m.spinner, spinner_area, &mut m.state.clone());
+    frame.render_stateful_widget(&m.spinner, spinner_area, &mut m.state);
 
     // "Spinning..." text right after the spinner
     let frame_str = m.state.frame_str();

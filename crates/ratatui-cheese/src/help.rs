@@ -369,25 +369,19 @@ impl Help {
                 continue;
             }
 
-            // Collect enabled bindings
-            let enabled: Vec<&Binding> = group.iter().filter(|b| b.is_enabled()).collect();
-            if enabled.is_empty() {
-                continue;
-            }
-
-            // Calculate max key display width for alignment within this column
-            let max_key_w = enabled
+            // Calculate max key/desc display widths in a single pass over enabled bindings
+            let (max_key_w, max_desc_w, enabled_count) = group
                 .iter()
-                .map(|b| display_width(b.key()))
-                .max()
-                .unwrap_or(0);
+                .filter(|b| b.is_enabled())
+                .fold((0, 0, 0usize), |(mk, md, count), b| {
+                    (
+                        mk.max(display_width(b.key())),
+                        md.max(display_width(b.description())),
+                        count + 1,
+                    )
+                });
 
             // Calculate total column display width: separator + max_key + space + max_desc
-            let max_desc_w = enabled
-                .iter()
-                .map(|b| display_width(b.description()))
-                .max()
-                .unwrap_or(0);
             let sep_w = if first_col { 0 } else { display_width(&self.full_separator) };
             let col_w = sep_w + max_key_w + 1 + max_desc_w;
 
@@ -405,7 +399,7 @@ impl Help {
             // Render separator
             if !first_col {
                 let sep_display_w = display_width(&self.full_separator) as u16;
-                for row in 0..enabled.len().min(area.height as usize) {
+                for row in 0..enabled_count.min(area.height as usize) {
                     buf.set_string(
                         col_x,
                         area.y + row as u16,
@@ -416,8 +410,8 @@ impl Help {
                 col_x += sep_display_w;
             }
 
-            // Render each binding in the column
-            for (row, binding) in enabled.iter().enumerate() {
+            // Render each enabled binding in the column
+            for (row, binding) in group.iter().filter(|b| b.is_enabled()).enumerate() {
                 if row >= area.height as usize {
                     break;
                 }

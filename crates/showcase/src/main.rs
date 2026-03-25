@@ -148,8 +148,8 @@ impl App {
         self.set_spinner(index);
     }
 
-    fn current_entry(&self) -> &SpinnerEntry {
-        &self.entries[self.spinner_index]
+    fn current_entry(&mut self) -> &mut SpinnerEntry {
+        &mut self.entries[self.spinner_index]
     }
 
     fn tick(&mut self) {
@@ -173,7 +173,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
     let mut app = App::new();
 
     loop {
-        terminal.draw(|frame| draw(frame, &app))?;
+        terminal.draw(|frame| draw(frame, &mut app))?;
 
         app.tick();
 
@@ -210,7 +210,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
 
 // -- Drawing --
 
-fn draw(frame: &mut Frame, app: &App) {
+fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
 
     // Two-column layout: sidebar (fixed) | detail (fill)
@@ -246,7 +246,7 @@ fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
+fn draw_detail(frame: &mut Frame, app: &mut App, area: Rect) {
     match WIDGETS[app.selected_widget] {
         "Spinner" => draw_spinner_detail(frame, app, area),
         "Help" => draw_help_detail(frame, app, area),
@@ -254,7 +254,7 @@ fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
+fn draw_spinner_detail(frame: &mut Frame, app: &mut App, area: Rect) {
     let entry = app.current_entry();
 
     let block = Block::bordered()
@@ -271,7 +271,7 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
     let gap = " ";
 
     let spinner_area = Rect::new(inner.x, inner.y, 10, 1);
-    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut entry.state.clone());
+    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut entry.state);
 
     let frames = entry.state.frames();
     let spinner_width = frames
