@@ -30,11 +30,11 @@
 //! let help = Help::new(&MyKeyMap);
 //! ```
 
+use crate::utils::display_width;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Widget;
-use unicode_width::UnicodeWidthStr;
 
 /// A key binding for display in the help widget.
 ///
@@ -281,11 +281,6 @@ impl Help {
         self
     }
 
-    /// Returns the display width of a string in terminal cells.
-    fn width(s: &str) -> usize {
-        UnicodeWidthStr::width(s)
-    }
-
     /// Renders the short (single-line) help view into the buffer.
     fn render_short_help(&self, area: Rect, buf: &mut Buffer) {
         if area.is_empty() || self.bindings.is_empty() {
@@ -304,14 +299,14 @@ impl Help {
             }
 
             // Calculate the display width of separator + "key desc"
-            let sep_w = if first { 0 } else { Self::width(&self.short_separator) };
+            let sep_w = if first { 0 } else { display_width(&self.short_separator) };
             let item_w =
-                sep_w + Self::width(binding.key()) + 1 + Self::width(binding.description());
+                sep_w + display_width(binding.key()) + 1 + display_width(binding.description());
 
             // Check if this item fits
             if max_width > 0 && total_width + item_w > max_width {
                 // Try to fit ellipsis
-                let tail_w = 1 + Self::width(&self.ellipsis);
+                let tail_w = 1 + display_width(&self.ellipsis);
                 if total_width + tail_w < max_width {
                     buf.set_string(x, y, " ", Style::default());
                     buf.set_string(x + 1, y, &self.ellipsis, self.styles.ellipsis);
@@ -322,12 +317,12 @@ impl Help {
             // Render separator
             if !first {
                 buf.set_string(x, y, &self.short_separator, self.styles.short_separator);
-                x += Self::width(&self.short_separator) as u16;
+                x += display_width(&self.short_separator) as u16;
             }
 
             // Render key
             buf.set_string(x, y, binding.key(), self.styles.short_key);
-            x += Self::width(binding.key()) as u16;
+            x += display_width(binding.key()) as u16;
 
             // Space between key and description
             buf.set_string(x, y, " ", self.styles.short_desc);
@@ -335,7 +330,7 @@ impl Help {
 
             // Render description
             buf.set_string(x, y, binding.description(), self.styles.short_desc);
-            x += Self::width(binding.description()) as u16;
+            x += display_width(binding.description()) as u16;
 
             total_width = (x - area.x) as usize;
             first = false;
@@ -368,23 +363,23 @@ impl Help {
             // Calculate max key display width for alignment within this column
             let max_key_w = enabled
                 .iter()
-                .map(|b| Self::width(b.key()))
+                .map(|b| display_width(b.key()))
                 .max()
                 .unwrap_or(0);
 
             // Calculate total column display width: separator + max_key + space + max_desc
             let max_desc_w = enabled
                 .iter()
-                .map(|b| Self::width(b.description()))
+                .map(|b| display_width(b.description()))
                 .max()
                 .unwrap_or(0);
-            let sep_w = if first_col { 0 } else { Self::width(&self.full_separator) };
+            let sep_w = if first_col { 0 } else { display_width(&self.full_separator) };
             let col_w = sep_w + max_key_w + 1 + max_desc_w;
 
             // Check if column fits
             if max_width > 0 && total_width + col_w > max_width {
                 // Try to fit ellipsis
-                let tail_w = 1 + Self::width(&self.ellipsis);
+                let tail_w = 1 + display_width(&self.ellipsis);
                 if total_width + tail_w < max_width {
                     buf.set_string(col_x, area.y, " ", Style::default());
                     buf.set_string(col_x + 1, area.y, &self.ellipsis, self.styles.ellipsis);
@@ -394,7 +389,7 @@ impl Help {
 
             // Render separator
             if !first_col {
-                let sep_display_w = Self::width(&self.full_separator) as u16;
+                let sep_display_w = display_width(&self.full_separator) as u16;
                 for row in 0..enabled.len().min(area.height as usize) {
                     buf.set_string(
                         col_x,
