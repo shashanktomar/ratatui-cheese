@@ -91,6 +91,6 @@ fn view(frame: &mut Frame, m: &Model) {
         .bindings(short_help())
         .binding_groups(full_help())
         .show_all(m.show_all);
-    let help_area = Rect::new(0, 3, 40, help.required_height());
+    let help_area = Rect::new(1, 3, 40, help.required_height());
     Widget::render(&help, help_area, frame.buffer_mut());
 }
