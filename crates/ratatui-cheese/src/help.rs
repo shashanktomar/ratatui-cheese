@@ -322,7 +322,7 @@ impl Help {
             if max_width > 0 && total_width + item_w > max_width {
                 // Try to fit ellipsis
                 let tail_w = 1 + display_width(&self.ellipsis);
-                if total_width + tail_w < max_width {
+                if total_width + tail_w <= max_width {
                     buf.set_string(x, y, " ", Style::default());
                     buf.set_string(x + 1, y, &self.ellipsis, self.styles.ellipsis);
                 }
@@ -395,7 +395,7 @@ impl Help {
             if max_width > 0 && total_width + col_w > max_width {
                 // Try to fit ellipsis
                 let tail_w = 1 + display_width(&self.ellipsis);
-                if total_width + tail_w < max_width {
+                if total_width + tail_w <= max_width {
                     buf.set_string(col_x, area.y, " ", Style::default());
                     buf.set_string(col_x + 1, area.y, &self.ellipsis, self.styles.ellipsis);
                 }
@@ -640,6 +640,16 @@ mod tests {
         assert_renders(&help, &expected);
     }
 
+    #[test]
+    fn render_short_help_truncation_renders_ellipsis_when_it_exactly_fits() {
+        let help = Help::default().styles(unstyled()).bindings(vec![
+            Binding::new("?", "help"),
+            Binding::new("x", "too long"),
+        ]);
+        let expected = Buffer::with_lines(["? help …"]);
+        assert_renders(&help, &expected);
+    }
+
     // === Full help rendering tests ===
 
     #[test]
@@ -703,6 +713,19 @@ mod tests {
                 vec![Binding::new("?", "help"), Binding::new("q", "quit")],
             ]);
         let expected = Buffer::with_lines(["? help     ", "q quit     "]);
+        assert_renders(&help, &expected);
+    }
+
+    #[test]
+    fn render_full_help_truncation_renders_ellipsis_when_it_exactly_fits() {
+        let help = Help::default()
+            .styles(unstyled())
+            .show_all(true)
+            .binding_groups(vec![
+                vec![Binding::new("?", "help")],
+                vec![Binding::new("x", "too long")],
+            ]);
+        let expected = Buffer::with_lines(["? help …"]);
         assert_renders(&help, &expected);
     }
 

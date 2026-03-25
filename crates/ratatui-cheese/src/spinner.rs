@@ -271,6 +271,7 @@ impl StatefulWidget for &Spinner {
     type State = SpinnerState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let area = area.intersection(buf.area);
         if area.is_empty() {
             return;
         }
@@ -558,5 +559,15 @@ mod tests {
             assert_eq!(buf[(0, 0)].symbol(), *expected_frame);
             state.tick(interval);
         }
+    }
+
+    #[test]
+    fn render_clips_when_area_row_is_outside_buffer() {
+        let spinner = Spinner::default();
+        let mut state = SpinnerState::new(SpinnerType::Line);
+        let area = Rect::new(0, 1, 3, 1);
+        let mut buf = Buffer::empty(Rect::new(0, 0, 3, 1));
+        StatefulWidget::render(&spinner, area, &mut buf, &mut state);
+        assert_eq!(buf, Buffer::with_lines(["   "]));
     }
 }
