@@ -49,6 +49,37 @@ See it in action (a direct port of the [Bubbletea spinners example](https://gith
 cargo run --example spinners
 ```
 
+### Help
+
+Keyboard shortcut help view with short (single-line) and full (multi-column) modes, matching Charmbracelet's Bubbles help component.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui_cheese::help::{Binding, Help};
+
+let help = Help::default()
+    .bindings(vec![Binding::new("?", "help"), Binding::new("q", "quit")])
+    .binding_groups(vec![
+        vec![Binding::new("?", "help"), Binding::new("q", "quit")],
+    ])
+    .show_all(true);
+
+// In your draw function:
+frame.render_widget(&help, area);
+```
+
+</details>
+
+![Help](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/help.gif)
+
+See it in action (a direct port of the [Bubbletea help example](https://github.com/charmbracelet/bubbletea/tree/main/examples/help)):
+
+```sh
+cargo run --example help
+```
+
 ## License
 
 MIT

@@ -7,6 +7,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Padding, Widget};
 use ratatui::{DefaultTerminal, Frame};
+use ratatui_cheese::help::{Binding, Help};
 use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 
 // -- Colors --
@@ -20,7 +21,7 @@ const COLOR_CUSTOM_ACCENT: Color = Color::Indexed(212);
 // Each widget in the showcase gets an entry here. As new widgets are added,
 // just append to this list.
 
-const WIDGETS: &[&str] = &["Spinner"];
+const WIDGETS: &[&str] = &["Spinner", "Help"];
 
 // -- Spinner config --
 
@@ -59,11 +60,31 @@ fn spinner_entries() -> Vec<SpinnerEntry> {
 
     entries.push(SpinnerEntry {
         name: "Custom",
-        state: SpinnerState::custom(vec!["⠇", "⠸"], Duration::from_millis(300)),
+        state: SpinnerState::custom(vec!["⠇".into(), "⠸".into()], Duration::from_millis(300)),
         spinner: Spinner::default().style(Style::default().fg(COLOR_CUSTOM_ACCENT)),
     });
 
     entries
+}
+
+// -- App state --
+
+// -- Help config --
+
+fn help_short_bindings() -> Vec<Binding> {
+    vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")]
+}
+
+fn help_full_bindings() -> Vec<Vec<Binding>> {
+    vec![
+        vec![
+            Binding::new("↑/k", "move up"),
+            Binding::new("↓/j", "move down"),
+            Binding::new("←/h", "move left"),
+            Binding::new("→/l", "move right"),
+        ],
+        vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")],
+    ]
 }
 
 // -- App state --
@@ -76,6 +97,9 @@ struct App {
     spinner_index: usize,
     entries: Vec<SpinnerEntry>,
     last_tick: Instant,
+
+    // Help state
+    help_show_all: bool,
 }
 
 impl App {
@@ -85,6 +109,7 @@ impl App {
             spinner_index: 0,
             entries: spinner_entries(),
             last_tick: Instant::now(),
+            help_show_all: false,
         }
     }
 
@@ -119,8 +144,8 @@ impl App {
         self.set_spinner(index);
     }
 
-    fn current_entry(&self) -> &SpinnerEntry {
-        &self.entries[self.spinner_index]
+    fn current_entry(&mut self) -> &mut SpinnerEntry {
+        &mut self.entries[self.spinner_index]
     }
 
     fn tick(&mut self) {
@@ -144,7 +169,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
     let mut app = App::new();
 
     loop {
-        terminal.draw(|frame| draw(frame, &app))?;
+        terminal.draw(|frame| draw(frame, &mut app))?;
 
         app.tick();
 
@@ -168,6 +193,11 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
                         app.prev_spinner();
                     }
                 }
+                KeyCode::Char('?') => {
+                    if WIDGETS[app.selected_widget] == "Help" {
+                        app.help_show_all = !app.help_show_all;
+                    }
+                }
                 _ => {}
             }
         }
@@ -176,7 +206,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
 
 // -- Drawing --
 
-fn draw(frame: &mut Frame, app: &App) {
+fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
 
     // Two-column layout: sidebar (fixed) | detail (fill)
@@ -212,13 +242,15 @@ fn draw_sidebar(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-fn draw_detail(frame: &mut Frame, app: &App, area: Rect) {
-    if WIDGETS[app.selected_widget] == "Spinner" {
-        draw_spinner_detail(frame, app, area);
+fn draw_detail(frame: &mut Frame, app: &mut App, area: Rect) {
+    match WIDGETS[app.selected_widget] {
+        "Spinner" => draw_spinner_detail(frame, app, area),
+        "Help" => draw_help_detail(frame, app, area),
+        _ => {}
     }
 }
 
-fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
+fn draw_spinner_detail(frame: &mut Frame, app: &mut App, area: Rect) {
     let entry = app.current_entry();
 
     let block = Block::bordered()
@@ -235,7 +267,7 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
     let gap = " ";
 
     let spinner_area = Rect::new(inner.x, inner.y, 10, 1);
-    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut entry.state.clone());
+    frame.render_stateful_widget(&entry.spinner, spinner_area, &mut entry.state);
 
     let frames = entry.state.frames();
     let spinner_width = frames
@@ -261,6 +293,39 @@ fn draw_spinner_detail(frame: &mut Frame, app: &App, area: Rect) {
         ));
         let help_area = Rect::new(inner.x, inner.y + 2, inner.width, 1);
         help.render(help_area, frame.buffer_mut());
+    }
+}
+
+fn draw_help_detail(frame: &mut Frame, app: &App, area: Rect) {
+    let title = if app.help_show_all { " Help: Full " } else { " Help: Short " };
+    let block = Block::bordered()
+        .title(title)
+        .padding(Padding::new(2, 2, 1, 1));
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+
+    if inner.is_empty() {
+        return;
+    }
+
+    // Help widget
+    let help = Help::default()
+        .bindings(help_short_bindings())
+        .binding_groups(help_full_bindings())
+        .show_all(app.help_show_all);
+    let help_height = help.required_height();
+    let help_area = Rect::new(inner.x, inner.y, inner.width, help_height.min(inner.height));
+    Widget::render(&help, help_area, frame.buffer_mut());
+
+    // Hint text
+    let hint_y = inner.y + help_height + 1;
+    if hint_y < inner.y + inner.height {
+        let hint = Line::from(Span::styled(
+            "?: toggle short/full help",
+            Style::default().fg(COLOR_HELP),
+        ));
+        let hint_area = Rect::new(inner.x, hint_y, inner.width, 1);
+        hint.render(hint_area, frame.buffer_mut());
     }
 }
 

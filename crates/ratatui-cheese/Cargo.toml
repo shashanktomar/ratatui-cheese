@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 ratatui = { workspace = true }
+unicode-width = "0.2.2"
 
 [dev-dependencies]
 crossterm = { workspace = true }

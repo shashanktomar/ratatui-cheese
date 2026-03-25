@@ -25,6 +25,14 @@ Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line,
 
 [Usage & docs](crates/ratatui-cheese/README.md#spinner)
 
+### Help
+
+Keyboard shortcut help view with short (single-line) and full (multi-column) modes, matching Charmbracelet's Bubbles help component.
+
+![Help](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/help.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#help)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
