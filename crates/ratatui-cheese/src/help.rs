@@ -7,27 +7,17 @@
 //! # Example
 //!
 //! ```rust
-//! use ratatui_cheese::help::{Binding, Help, KeyMap};
+//! use ratatui_cheese::help::{Binding, Help};
 //!
-//! struct MyKeyMap;
-//!
-//! impl KeyMap for MyKeyMap {
-//!     fn short_help(&self) -> Vec<Binding> {
-//!         vec![
-//!             Binding::new("?", "toggle help"),
-//!             Binding::new("q", "quit"),
-//!         ]
-//!     }
-//!
-//!     fn full_help(&self) -> Vec<Vec<Binding>> {
-//!         vec![
-//!             vec![Binding::new("↑/k", "up"), Binding::new("↓/j", "down")],
-//!             vec![Binding::new("?", "help"), Binding::new("q", "quit")],
-//!         ]
-//!     }
-//! }
-//!
-//! let help = Help::new(&MyKeyMap);
+//! let help = Help::default()
+//!     .bindings(vec![
+//!         Binding::new("?", "toggle help"),
+//!         Binding::new("q", "quit"),
+//!     ])
+//!     .binding_groups(vec![
+//!         vec![Binding::new("↑/k", "up"), Binding::new("↓/j", "down")],
+//!         vec![Binding::new("?", "help"), Binding::new("q", "quit")],
+//!     ]);
 //! ```
 
 use crate::utils::display_width;
@@ -79,19 +69,6 @@ impl Binding {
     pub fn is_enabled(&self) -> bool {
         self.enabled
     }
-}
-
-/// Trait for types that provide key bindings for the help widget.
-///
-/// Implement this on your key map struct to define which bindings appear
-/// in short (compact) and full (expanded) help views.
-pub trait KeyMap {
-    /// Returns bindings for the compact single-line help view.
-    fn short_help(&self) -> Vec<Binding>;
-
-    /// Returns grouped bindings for the expanded multi-column help view.
-    /// Each inner `Vec` becomes a column.
-    fn full_help(&self) -> Vec<Vec<Binding>>;
 }
 
 /// Styles for the help widget, split by short and full mode.
@@ -168,25 +145,20 @@ impl HelpStyles {
 /// A help widget that renders keyboard shortcut bindings.
 ///
 /// Supports two display modes: a compact single-line view (`show_all = false`)
-/// and an expanded multi-column view (`show_all = true`). Bindings are provided
-/// via the [`KeyMap`] trait at construction time.
+/// and an expanded multi-column view (`show_all = true`). Configure bindings
+/// via builder methods.
 ///
 /// # Example
 ///
 /// ```rust
-/// use ratatui_cheese::help::{Binding, Help, KeyMap};
+/// use ratatui_cheese::help::{Binding, Help};
 ///
-/// struct Keys;
-/// impl KeyMap for Keys {
-///     fn short_help(&self) -> Vec<Binding> {
-///         vec![Binding::new("?", "help"), Binding::new("q", "quit")]
-///     }
-///     fn full_help(&self) -> Vec<Vec<Binding>> {
-///         vec![vec![Binding::new("?", "help"), Binding::new("q", "quit")]]
-///     }
-/// }
-///
-/// let help = Help::new(&Keys).show_all(true);
+/// let help = Help::default()
+///     .bindings(vec![Binding::new("?", "help"), Binding::new("q", "quit")])
+///     .binding_groups(vec![
+///         vec![Binding::new("?", "help"), Binding::new("q", "quit")],
+///     ])
+///     .show_all(true);
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Help {
@@ -214,18 +186,6 @@ impl Default for Help {
 }
 
 impl Help {
-    /// Creates a help widget from a [`KeyMap`] implementation.
-    ///
-    /// Calls `short_help()` and `full_help()` on the key map to populate bindings.
-    #[must_use]
-    pub fn new(keymap: &impl KeyMap) -> Self {
-        Self {
-            bindings: keymap.short_help(),
-            binding_groups: keymap.full_help(),
-            ..Default::default()
-        }
-    }
-
     /// Sets whether to show the full expanded help view.
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn show_all(mut self, show_all: bool) -> Self {
@@ -503,16 +463,10 @@ mod tests {
         ]
     }
 
-    struct TestKeyMap;
-
-    impl KeyMap for TestKeyMap {
-        fn short_help(&self) -> Vec<Binding> {
-            test_bindings()
-        }
-
-        fn full_help(&self) -> Vec<Vec<Binding>> {
-            test_binding_groups()
-        }
+    fn test_help() -> Help {
+        Help::default()
+            .bindings(test_bindings())
+            .binding_groups(test_binding_groups())
     }
 
     // === Binding tests ===
@@ -535,13 +489,13 @@ mod tests {
 
     #[test]
     fn required_height_short() {
-        let help = Help::new(&TestKeyMap);
+        let help = test_help();
         assert_eq!(help.required_height(), 1);
     }
 
     #[test]
     fn required_height_full() {
-        let help = Help::new(&TestKeyMap).show_all(true);
+        let help = test_help().show_all(true);
         // TestKeyMap: group 1 has 2 bindings, group 2 has 2 bindings → max = 2
         assert_eq!(help.required_height(), 2);
     }
@@ -557,8 +511,8 @@ mod tests {
     }
 
     #[test]
-    fn new_from_keymap() {
-        let help = Help::new(&TestKeyMap);
+    fn default_help() {
+        let help = test_help();
         assert_eq!(help.bindings.len(), 4);
         assert_eq!(help.binding_groups.len(), 2);
         assert!(!help.show_all);
@@ -566,7 +520,7 @@ mod tests {
 
     #[test]
     fn builder_methods() {
-        let help = Help::new(&TestKeyMap)
+        let help = test_help()
             .show_all(true)
             .short_separator(" | ")
             .full_separator("  ")
@@ -581,7 +535,7 @@ mod tests {
 
     #[test]
     fn render_empty_area() {
-        let help = Help::new(&TestKeyMap);
+        let help = test_help();
         let mut buf = Buffer::empty(Rect::new(0, 0, 0, 0));
         help.render(buf.area, &mut buf);
     }

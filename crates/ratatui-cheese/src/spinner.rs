@@ -152,9 +152,8 @@ impl Styled for Spinner {
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SpinnerState {
-    spinner_type: SpinnerType,
-    custom_frames: Option<Vec<&'static str>>,
-    custom_interval: Option<Duration>,
+    frames: Vec<String>,
+    interval: Duration,
     frame: usize,
     elapsed: Duration,
 }
@@ -163,20 +162,18 @@ impl SpinnerState {
     /// Creates a new state with the given spinner preset.
     pub fn new(spinner_type: SpinnerType) -> Self {
         Self {
-            spinner_type,
-            custom_frames: None,
-            custom_interval: None,
+            frames: spinner_type.frames().iter().map(|s| (*s).into()).collect(),
+            interval: spinner_type.interval(),
             frame: 0,
             elapsed: Duration::ZERO,
         }
     }
 
     /// Creates a state with custom frames and interval.
-    pub fn custom(frames: Vec<&'static str>, interval: Duration) -> Self {
+    pub fn custom(frames: Vec<String>, interval: Duration) -> Self {
         Self {
-            spinner_type: SpinnerType::Line,
-            custom_frames: Some(frames),
-            custom_interval: Some(interval),
+            frames,
+            interval,
             frame: 0,
             elapsed: Duration::ZERO,
         }
@@ -187,20 +184,14 @@ impl SpinnerState {
     /// Accumulates time internally and advances frames when the interval
     /// is reached. Handles multiple frame advances if `dt` is large.
     pub fn tick(&mut self, dt: Duration) {
-        let frame_count = self.frames().len();
-        if frame_count == 0 {
-            return;
-        }
-
-        let interval = self.interval();
-        if interval.is_zero() {
+        if self.frames.is_empty() || self.interval.is_zero() {
             return;
         }
 
         self.elapsed += dt;
-        while self.elapsed >= interval {
-            self.elapsed -= interval;
-            self.frame = (self.frame + 1) % frame_count;
+        while self.elapsed >= self.interval {
+            self.elapsed -= self.interval;
+            self.frame = (self.frame + 1) % self.frames.len();
         }
     }
 
@@ -211,27 +202,20 @@ impl SpinnerState {
 
     /// Returns the current frame string.
     pub fn frame_str(&self) -> &str {
-        let frames = self.frames();
-        if frames.is_empty() {
+        if self.frames.is_empty() {
             return "";
         }
-        frames[self.frame % frames.len()]
+        &self.frames[self.frame % self.frames.len()]
     }
 
     /// Returns the frames this spinner uses.
-    pub fn frames(&self) -> &[&'static str] {
-        match &self.custom_frames {
-            Some(frames) => frames,
-            None => self.spinner_type.frames(),
-        }
+    pub fn frames(&self) -> &[String] {
+        &self.frames
     }
 
     /// Returns the interval between frames.
     pub fn interval(&self) -> Duration {
-        match self.custom_interval {
-            Some(interval) => interval,
-            None => self.spinner_type.interval(),
-        }
+        self.interval
     }
 }
 
@@ -310,7 +294,10 @@ mod tests {
 
     #[test]
     fn custom_frames_and_interval() {
-        let state = SpinnerState::custom(vec!["a", "b", "c"], Duration::from_millis(200));
+        let state = SpinnerState::custom(
+            vec!["a".into(), "b".into(), "c".into()],
+            Duration::from_millis(200),
+        );
         assert_eq!(state.frames(), &["a", "b", "c"]);
         assert_eq!(state.interval(), Duration::from_millis(200));
     }

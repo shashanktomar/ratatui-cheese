@@ -12,26 +12,22 @@ use ratatui::style::{Color, Style};
 use ratatui::text::Span;
 use ratatui::widgets::Widget;
 use ratatui::{DefaultTerminal, Frame};
-use ratatui_cheese::help::{Binding, Help, KeyMap};
+use ratatui_cheese::help::{Binding, Help};
 
-struct Keys;
+fn short_help() -> Vec<Binding> {
+    vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")]
+}
 
-impl KeyMap for Keys {
-    fn short_help(&self) -> Vec<Binding> {
-        vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")]
-    }
-
-    fn full_help(&self) -> Vec<Vec<Binding>> {
+fn full_help() -> Vec<Vec<Binding>> {
+    vec![
         vec![
-            vec![
-                Binding::new("↑/k", "move up"),
-                Binding::new("↓/j", "move down"),
-                Binding::new("←/h", "move left"),
-                Binding::new("→/l", "move right"),
-            ],
-            vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")],
-        ]
-    }
+            Binding::new("↑/k", "move up"),
+            Binding::new("↓/j", "move down"),
+            Binding::new("←/h", "move left"),
+            Binding::new("→/l", "move right"),
+        ],
+        vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")],
+    ]
 }
 
 struct Model {
@@ -91,7 +87,10 @@ fn view(frame: &mut Frame, m: &Model) {
     Widget::render(status, status_area, frame.buffer_mut());
 
     // Help view below status
-    let help = Help::new(&Keys).show_all(m.show_all);
+    let help = Help::default()
+        .bindings(short_help())
+        .binding_groups(full_help())
+        .show_all(m.show_all);
     let help_area = Rect::new(0, 3, 40, help.required_height());
     Widget::render(&help, help_area, frame.buffer_mut());
 }

@@ -7,7 +7,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Padding, Widget};
 use ratatui::{DefaultTerminal, Frame};
-use ratatui_cheese::help::{Binding, Help, KeyMap};
+use ratatui_cheese::help::{Binding, Help};
 use ratatui_cheese::spinner::{Spinner, SpinnerState, SpinnerType};
 
 // -- Colors --
@@ -60,7 +60,7 @@ fn spinner_entries() -> Vec<SpinnerEntry> {
 
     entries.push(SpinnerEntry {
         name: "Custom",
-        state: SpinnerState::custom(vec!["⠇", "⠸"], Duration::from_millis(300)),
+        state: SpinnerState::custom(vec!["⠇".into(), "⠸".into()], Duration::from_millis(300)),
         spinner: Spinner::default().style(Style::default().fg(COLOR_CUSTOM_ACCENT)),
     });
 
@@ -71,24 +71,20 @@ fn spinner_entries() -> Vec<SpinnerEntry> {
 
 // -- Help config --
 
-struct HelpKeys;
+fn help_short_bindings() -> Vec<Binding> {
+    vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")]
+}
 
-impl KeyMap for HelpKeys {
-    fn short_help(&self) -> Vec<Binding> {
-        vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")]
-    }
-
-    fn full_help(&self) -> Vec<Vec<Binding>> {
+fn help_full_bindings() -> Vec<Vec<Binding>> {
+    vec![
         vec![
-            vec![
-                Binding::new("↑/k", "move up"),
-                Binding::new("↓/j", "move down"),
-                Binding::new("←/h", "move left"),
-                Binding::new("→/l", "move right"),
-            ],
-            vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")],
-        ]
-    }
+            Binding::new("↑/k", "move up"),
+            Binding::new("↓/j", "move down"),
+            Binding::new("←/h", "move left"),
+            Binding::new("→/l", "move right"),
+        ],
+        vec![Binding::new("?", "toggle help"), Binding::new("q", "quit")],
+    ]
 }
 
 // -- App state --
@@ -313,7 +309,10 @@ fn draw_help_detail(frame: &mut Frame, app: &App, area: Rect) {
     }
 
     // Help widget
-    let help = Help::new(&HelpKeys).show_all(app.help_show_all);
+    let help = Help::default()
+        .bindings(help_short_bindings())
+        .binding_groups(help_full_bindings())
+        .show_all(app.help_show_all);
     let help_height = help.required_height();
     let help_area = Rect::new(inner.x, inner.y, inner.width, help_height.min(inner.height));
     Widget::render(&help, help_area, frame.buffer_mut());
