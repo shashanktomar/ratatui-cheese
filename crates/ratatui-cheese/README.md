@@ -121,6 +121,43 @@ let mut state = TreeState::new(2);
 cargo run --example tree
 ```
 
+### Paginator
+
+Page indicator widget with dot (`•••••`) and arabic (`2/10`) display modes. Tracks page state and provides helpers for slicing item collections. Ported from Charmbracelet's Bubbles paginator.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui_cheese::paginator::{Paginator, PaginatorState, PaginatorMode, PaginatorStyles};
+use ratatui_cheese::theme::Palette;
+
+let paginator = Paginator::default()
+    .mode(PaginatorMode::Dots)
+    .styles(PaginatorStyles::from_palette(&Palette::dark()));
+
+let mut state = PaginatorState::new(100, 10); // 100 items, 10 per page
+
+// Navigation:
+// state.next_page();
+// state.prev_page();
+
+// Slice your items for the current page:
+// let (start, end) = state.get_slice_bounds(items.len());
+// let page_items = &items[start..end];
+
+// In your draw function:
+// frame.render_stateful_widget(&paginator, area, &mut state);
+```
+
+</details>
+
+![Paginator](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/paginator.gif)
+
+```sh
+cargo run --example paginator
+```
+
 ## License
 
 MIT

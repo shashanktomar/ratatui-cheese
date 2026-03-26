@@ -4,6 +4,7 @@
 //! to the Rust TUI ecosystem.
 
 pub mod help;
+pub mod paginator;
 pub mod spinner;
 pub mod theme;
 pub mod tree;

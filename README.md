@@ -41,6 +41,14 @@ Expandable parent/child tree list with collapsible groups, right-aligned counts,
 
 [Usage & docs](crates/ratatui-cheese/README.md#tree)
 
+### Paginator
+
+Page indicator with dot and arabic display modes. Tracks pagination state and provides slice helpers.
+
+![Paginator](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/paginator.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#paginator)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
