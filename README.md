@@ -12,7 +12,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ratatui-cheese = "0.3"
+ratatui-cheese = "0.4"
 ```
 
 ## Widgets
