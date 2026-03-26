@@ -80,6 +80,47 @@ See it in action (a direct port of the [Bubbletea help example](https://github.c
 cargo run --example help
 ```
 
+### Tree
+
+Expandable parent/child tree list with one-level depth. Supports right-aligned counts, text truncation, vertical scrolling, and three display modes (simple, explicit count, parent fallback). Themeable via `Palette`.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui_cheese::tree::{Tree, TreeGroup, TreeItem, TreeState, TreeStyles};
+use ratatui_cheese::theme::Palette;
+
+let tree = Tree::default()
+    .groups(vec![
+        TreeGroup::new(TreeItem::new("Documents").count(87))
+            .children(vec![
+                TreeItem::new("Architecture Decision Records"),
+                TreeItem::new("Team Onboarding Guide"),
+            ]),
+        TreeGroup::new(TreeItem::new("Bookmarks").count(31)),
+    ])
+    .styles(TreeStyles::from_palette(&Palette::dark()));
+
+let mut state = TreeState::new(2);
+
+// Navigation:
+// state.select_next(&groups);   // move down
+// state.toggle_selected();       // expand/collapse
+// state.expand_all();            // open everything
+
+// In your draw function:
+// frame.render_stateful_widget(&tree, area, &mut state);
+```
+
+</details>
+
+![Tree](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/tree.gif)
+
+```sh
+cargo run --example tree
+```
+
 ## License
 
 MIT

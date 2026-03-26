@@ -5,5 +5,7 @@
 
 pub mod help;
 pub mod spinner;
+pub mod theme;
+pub mod tree;
 
 mod utils;

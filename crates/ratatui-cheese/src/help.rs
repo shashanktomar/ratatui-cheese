@@ -20,10 +20,11 @@
 //!     ]);
 //! ```
 
+use crate::theme::Palette;
 use crate::utils::display_width;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Style};
+use ratatui::style::Style;
 use ratatui::widgets::Widget;
 
 /// A key binding for display in the help widget.
@@ -100,15 +101,12 @@ impl Default for HelpStyles {
 }
 
 impl HelpStyles {
-    /// Creates styles for dark backgrounds.
-    ///
-    /// Matches the default dark theme from Charmbracelet's Bubbles help component.
+    /// Creates styles from a [`Palette`].
     #[must_use]
-    pub fn dark() -> Self {
-        // Go source: lightDark(lightColor, darkColor) — dark is the second arg
-        let key_style = Style::default().fg(Color::Rgb(0x62, 0x62, 0x62));
-        let desc_style = Style::default().fg(Color::Rgb(0x4A, 0x4A, 0x4A));
-        let sep_style = Style::default().fg(Color::Rgb(0x3C, 0x3C, 0x3C));
+    pub fn from_palette(p: &Palette) -> Self {
+        let key_style = Style::default().fg(p.muted);
+        let desc_style = Style::default().fg(p.faint);
+        let sep_style = Style::default().fg(p.faint);
 
         Self {
             ellipsis: sep_style,
@@ -121,24 +119,16 @@ impl HelpStyles {
         }
     }
 
+    /// Creates styles for dark backgrounds.
+    #[must_use]
+    pub fn dark() -> Self {
+        Self::from_palette(&Palette::dark())
+    }
+
     /// Creates styles for light backgrounds.
-    ///
-    /// Matches the light theme from Charmbracelet's Bubbles help component.
     #[must_use]
     pub fn light() -> Self {
-        let key_style = Style::default().fg(Color::Rgb(0x90, 0x90, 0x90));
-        let desc_style = Style::default().fg(Color::Rgb(0xB2, 0xB2, 0xB2));
-        let sep_style = Style::default().fg(Color::Rgb(0xDA, 0xDA, 0xDA));
-
-        Self {
-            ellipsis: sep_style,
-            short_key: key_style,
-            short_desc: desc_style,
-            short_separator: sep_style,
-            full_key: key_style,
-            full_desc: desc_style,
-            full_separator: sep_style,
-        }
+        Self::from_palette(&Palette::light())
     }
 }
 
@@ -681,35 +671,35 @@ mod tests {
 
     #[test]
     fn dark_styles_created() {
+        use crate::theme::Palette;
+        let p = Palette::dark();
         let styles = HelpStyles::dark();
-        assert_eq!(styles.short_key.fg, Some(Color::Rgb(0x62, 0x62, 0x62)));
-        assert_eq!(styles.short_desc.fg, Some(Color::Rgb(0x4A, 0x4A, 0x4A)));
-        assert_eq!(
-            styles.short_separator.fg,
-            Some(Color::Rgb(0x3C, 0x3C, 0x3C))
-        );
+        assert_eq!(styles.short_key.fg, Some(p.muted));
+        assert_eq!(styles.short_desc.fg, Some(p.faint));
+        assert_eq!(styles.short_separator.fg, Some(p.faint));
     }
 
     #[test]
     fn light_styles_created() {
+        use crate::theme::Palette;
+        let p = Palette::light();
         let styles = HelpStyles::light();
-        assert_eq!(styles.short_key.fg, Some(Color::Rgb(0x90, 0x90, 0x90)));
-        assert_eq!(styles.short_desc.fg, Some(Color::Rgb(0xB2, 0xB2, 0xB2)));
-        assert_eq!(
-            styles.short_separator.fg,
-            Some(Color::Rgb(0xDA, 0xDA, 0xDA))
-        );
+        assert_eq!(styles.short_key.fg, Some(p.muted));
+        assert_eq!(styles.short_desc.fg, Some(p.faint));
+        assert_eq!(styles.short_separator.fg, Some(p.faint));
     }
 
     #[test]
     fn render_short_help_with_styles() {
+        use crate::theme::Palette;
+        let p = Palette::dark();
         let help = Help::default()
             .styles(HelpStyles::dark())
             .bindings(vec![Binding::new("q", "quit")]);
         let area = Rect::new(0, 0, 20, 1);
         let mut buf = Buffer::empty(area);
         help.render(area, &mut buf);
-        assert_eq!(buf[(0, 0)].fg, Color::Rgb(0x62, 0x62, 0x62)); // key style
-        assert_eq!(buf[(2, 0)].fg, Color::Rgb(0x4A, 0x4A, 0x4A)); // desc style
+        assert_eq!(buf[(0, 0)].fg, p.muted); // key style
+        assert_eq!(buf[(2, 0)].fg, p.faint); // desc style
     }
 }
