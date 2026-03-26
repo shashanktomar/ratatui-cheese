@@ -41,13 +41,46 @@ setup:
 ################ Dev #########################
 ##############################################
 
+# Run all quality gates: check, test, lint, dead-code
+[group('dev')]
+all: check test lint dead-code
+
 # Check all targets for compilation errors
 [group('dev')]
 check:
 	cargo check --all-targets
 
-# Run all quality gates: check, test, lint, dead-code
-all: check test lint dead-code
+# Start bacon watch tool for live feedback
+[group('dev')]
+watch:
+	bacon
+
+# Auto-fix formatting and clippy warnings
+[group('dev')]
+fix:
+	cargo fmt
+	cargo clippy --fix -- -D warnings # Note that --fix implies --all-targets
+
+# Run all tests using cargo-nextest
+[group('dev')]
+test $RUST_BACKTRACE="1":
+	cargo nextest run
+
+# Run clippy on all targets
+[group('dev')]
+lint:
+	cargo fmt --check
+	cargo clippy --all-targets -- -D warnings
+
+# Search for #[allow(dead_code)] occurrences
+[group('dev')]
+dead-code:
+	@echo "Searching for #[allow(dead_code)] occurrences..."
+	@rg "#\[allow\(dead_code\)\]" --glob '!.target/**' --glob '!JUSTFILE' || echo "None found."
+
+##############################################
+################ Examples ####################
+##############################################
 
 # Run the showcase demo app
 [group('examples')]
@@ -59,11 +92,6 @@ showcase:
 example name:
 	cargo run -p ratatui-cheese --example {{name}}
 
-# Start bacon watch tool for live feedback
-[group('dev')]
-watch:
-	bacon
-
 ##############################################
 ################ Recording ###################
 ##############################################
@@ -74,41 +102,18 @@ record name:
 	vhs tools/vhs/{{name}}.tape
 
 ##############################################
-################ Test & Lint #################
+################ Publishing ##################
 ##############################################
 
-# Run all tests using cargo-nextest
-[group('test-and-lint')]
-test $RUST_BACKTRACE="1":
-	cargo nextest run
-
-# Run clippy on all targets
-[group('test-and-lint')]
-lint:
-	cargo fmt --check
-	cargo clippy --all-targets -- -D warnings
-
-# Auto-fix formatting and clippy warnings
-[group('test-and-lint')]
-fix:
-	cargo fmt
-	cargo clippy --fix -- -D warnings # Note that --fix implies --all-targets
-
 # Run all CI checks: check, lint, and test (no nextest dependency)
-[group('dev')]
+[group('publishing')]
 ci: check lint
 	cargo test --workspace
 
 # Publish ratatui-cheese to crates.io (runs CI checks first)
-[group('dev')]
+[group('publishing')]
 publish: ci
 	cargo publish -p ratatui-cheese
-
-# Search for #[allow(dead_code)] occurrences
-[group('test-and-lint')]
-dead-code:
-	@echo "Searching for #[allow(dead_code)] occurrences..."
-	@rg "#\[allow\(dead_code\)\]" --glob '!.target/**' --glob '!JUSTFILE' || echo "None found."
 
 ##############################################
 ################ Dependencies ################
