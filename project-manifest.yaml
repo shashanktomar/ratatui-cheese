@@ -17,3 +17,8 @@ references:
       url: git@github.com:charmbracelet/bubbletea.git
       branch: main
       description: "Charm Bubble Tea - Go framework for terminal apps"
+
+    - name: lipgloss
+      url: git@github.com:charmbracelet/lipgloss.git
+      branch: master
+      description: "Charm Lip Gloss - Style definitions for terminal layouts"

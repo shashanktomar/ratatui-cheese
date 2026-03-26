@@ -6,54 +6,46 @@ use ratatui::layout::{Constraint, Layout};
 use ratatui::widgets::{Block, Padding, StatefulWidget, Widget};
 use ratatui::{DefaultTerminal, Frame};
 use ratatui_cheese::help::{Binding, Help};
+use ratatui_cheese::theme::Palette;
 use ratatui_cheese::tree::{Mode, Tree, TreeGroup, TreeItem, TreeState, TreeStyles};
 
 fn sample_groups() -> Vec<TreeGroup> {
     vec![
-        TreeGroup::new(TreeItem::new("Favorites (old)")).children(vec![
-            TreeItem::new("HN Best"),
-            TreeItem::new("Reddit Programming"),
+        TreeGroup::new(TreeItem::new("Inbox")).children(vec![
+            TreeItem::new("Welcome to the app"),
+            TreeItem::new("Your weekly digest"),
         ]),
-        TreeGroup::new(TreeItem::new("Programming").count(44)).children(vec![
-            TreeItem::new("Hacker News"),
-            TreeItem::new("Lobste.rs"),
-            TreeItem::new("Reddit r/rust"),
+        TreeGroup::new(TreeItem::new("Projects").count(12)).children(vec![
+            TreeItem::new("Website Redesign").count(4),
+            TreeItem::new("Mobile App v2").count(3),
+            TreeItem::new("API Migration").count(5),
         ]),
-        TreeGroup::new(TreeItem::new("Engineering Blogs").count(123)).children(vec![
-            TreeItem::new("Netflix Technology Blog"),
-            TreeItem::new("Cloudflare Blog and Announcements"),
-            TreeItem::new("Discord Engineering Blog"),
-            TreeItem::new("Uber Engineering Blog"),
-            TreeItem::new("Stripe Engineering Blog"),
-            TreeItem::new("Airbnb Engineering and Data Science"),
-            TreeItem::new("Meta Engineering Blog"),
-            TreeItem::new("Google Developers Blog"),
+        TreeGroup::new(TreeItem::new("Documents").count(87)).children(vec![
+            TreeItem::new("Q4 Planning Document"),
+            TreeItem::new("Architecture Decision Records"),
+            TreeItem::new("Team Onboarding Guide"),
+            TreeItem::new("Infrastructure Runbook and Procedures"),
+            TreeItem::new("Quarterly Performance Review Template"),
+            TreeItem::new("Release Notes - Version History"),
+            TreeItem::new("Security Compliance Checklist"),
+            TreeItem::new("Budget Forecast and Allocation"),
         ]),
-        TreeGroup::new(TreeItem::new("K8s Ecosystem").count(107)).children(vec![
-            TreeItem::new("Blog - Cloud Native Computing Foundation").count(43),
-            TreeItem::new("Cloud Native Now").count(46),
-            TreeItem::new("Istio Blog and News").count(9),
-            TreeItem::new("Release notes from kubernetes").count(9),
-            TreeItem::new("Kubernetes Blog"),
-            TreeItem::new("Sysdig Blog | Use Cases, Thought Leadership").count(12),
-            TreeItem::new("Technology Archives - The New Stack").count(31),
-            TreeItem::new("Weaveworks"),
-            TreeItem::new("Container Journal - Features and Columns").count(7),
-            TreeItem::new("Giant Swarm Blog and News"),
-            TreeItem::new("Rancher Labs Blog and Announcements").count(18),
+        TreeGroup::new(TreeItem::new("Media").count(243)).children(vec![
+            TreeItem::new("Screenshots").count(58),
+            TreeItem::new("Recordings").count(12),
+            TreeItem::new("Exports").count(34),
+            TreeItem::new("Thumbnails").count(139),
         ]),
-        TreeGroup::new(TreeItem::new("Other Clouds").count(13)),
-        TreeGroup::new(TreeItem::new("Tech Blogs").count(163)).children(vec![
-            TreeItem::new("TechCrunch"),
-            TreeItem::new("Ars Technica"),
-            TreeItem::new("The Verge"),
+        TreeGroup::new(TreeItem::new("Bookmarks").count(31)),
+        TreeGroup::new(TreeItem::new("Notes").count(56)).children(vec![
+            TreeItem::new("Meeting Notes"),
+            TreeItem::new("Ideas"),
+            TreeItem::new("Reading List"),
         ]),
-        TreeGroup::new(TreeItem::new("t.master").count(39)),
-        TreeGroup::new(TreeItem::new("t.ai").count(110)),
-        TreeGroup::new(TreeItem::new("t.lang").count(15)),
-        TreeGroup::new(TreeItem::new("t.startups")),
-        TreeGroup::new(TreeItem::new("t.startups.asia").count(142)),
-        TreeGroup::new(TreeItem::new("t.startups.aus").count(106)),
+        TreeGroup::new(TreeItem::new("Archive").count(412)),
+        TreeGroup::new(TreeItem::new("Trash")),
+        TreeGroup::new(TreeItem::new("Shared with Me").count(7)),
+        TreeGroup::new(TreeItem::new("Favorites").count(15)),
     ]
 }
 
@@ -118,8 +110,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
 fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
 
-    let [left, _] =
-        Layout::horizontal([Constraint::Max(40), Constraint::Fill(1)]).areas(area);
+    let [left, _] = Layout::horizontal([Constraint::Max(40), Constraint::Fill(1)]).areas(area);
 
     let help = Help::default()
         .bindings(vec![
@@ -154,7 +145,7 @@ fn draw(frame: &mut Frame, app: &mut App) {
 
     let tree = Tree::default()
         .groups(app.groups.clone())
-        .styles(TreeStyles::dark())
+        .styles(TreeStyles::from_palette(&Palette::charm()))
         .mode(app.mode);
 
     StatefulWidget::render(&tree, inner, frame.buffer_mut(), &mut app.tree_state);

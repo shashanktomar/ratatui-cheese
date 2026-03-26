@@ -27,6 +27,7 @@
 
 use std::fmt;
 
+use crate::theme::Palette;
 use crate::utils::display_width;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -197,38 +198,31 @@ impl Default for TreeStyles {
 }
 
 impl TreeStyles {
+    /// Creates styles from a [`Palette`].
+    #[must_use]
+    pub fn from_palette(p: &Palette) -> Self {
+        Self {
+            parent: Style::default().fg(p.foreground),
+            child: Style::default().fg(p.muted),
+            selected: Style::default().fg(p.primary).bg(p.surface),
+            chevron: Style::default().fg(p.muted),
+            chevron_active: Style::default().fg(p.primary),
+            chevron_dim: Style::default().fg(p.faint),
+            count: Style::default().fg(p.muted),
+            icon: Style::default(),
+        }
+    }
+
     /// Creates styles for dark backgrounds.
     #[must_use]
     pub fn dark() -> Self {
-        Self {
-            parent: Style::default().fg(ratatui::style::Color::Indexed(252)),
-            child: Style::default().fg(ratatui::style::Color::Indexed(245)),
-            selected: Style::default()
-                .fg(ratatui::style::Color::Indexed(212))
-                .bg(ratatui::style::Color::Indexed(237)),
-            chevron: Style::default().fg(ratatui::style::Color::Indexed(245)),
-            chevron_active: Style::default().fg(ratatui::style::Color::Indexed(212)),
-            chevron_dim: Style::default().fg(ratatui::style::Color::Indexed(238)),
-            count: Style::default().fg(ratatui::style::Color::Indexed(241)),
-            icon: Style::default(),
-        }
+        Self::from_palette(&Palette::dark())
     }
 
     /// Creates styles for light backgrounds.
     #[must_use]
     pub fn light() -> Self {
-        Self {
-            parent: Style::default().fg(ratatui::style::Color::Indexed(235)),
-            child: Style::default().fg(ratatui::style::Color::Indexed(240)),
-            selected: Style::default()
-                .fg(ratatui::style::Color::Indexed(162))
-                .bg(ratatui::style::Color::Indexed(150)),
-            chevron: Style::default().fg(ratatui::style::Color::Indexed(240)),
-            chevron_active: Style::default().fg(ratatui::style::Color::Indexed(162)),
-            chevron_dim: Style::default().fg(ratatui::style::Color::Indexed(250)),
-            count: Style::default().fg(ratatui::style::Color::Indexed(245)),
-            icon: Style::default(),
-        }
+        Self::from_palette(&Palette::light())
     }
 }
 
