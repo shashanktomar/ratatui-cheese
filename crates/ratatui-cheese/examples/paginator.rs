@@ -9,7 +9,7 @@ use ratatui_cheese::help::{Binding, Help};
 use ratatui_cheese::paginator::{Paginator, PaginatorMode, PaginatorState, PaginatorStyles};
 use ratatui_cheese::theme::Palette;
 
-const PER_PAGE: usize = 10;
+const PER_PAGE: usize = 5;
 
 struct App {
     items: Vec<String>,
