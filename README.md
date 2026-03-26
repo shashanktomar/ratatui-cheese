@@ -33,6 +33,14 @@ Keyboard shortcut help view with short (single-line) and full (multi-column) mod
 
 [Usage & docs](crates/ratatui-cheese/README.md#help)
 
+### Tree
+
+Expandable parent/child tree list with collapsible groups, right-aligned counts, text truncation, and palette-based theming.
+
+![Tree](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/tree.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#tree)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
