@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Ratatui Cheese Review">
+  <rect width="256" height="256" rx="40" fill="#E6C15A"/>
+  <rect x="52" y="40" width="128" height="160" rx="20" fill="#1F2937"/>
+  <rect x="76" y="72" width="64" height="12" rx="6" fill="#F9FAFB"/>
+  <rect x="76" y="96" width="86" height="12" rx="6" fill="#F9FAFB"/>
+  <rect x="76" y="120" width="72" height="12" rx="6" fill="#F9FAFB"/>
+  <rect x="76" y="144" width="92" height="12" rx="6" fill="#F9FAFB"/>
+  <circle cx="184" cy="176" r="40" fill="#C2410C"/>
+  <circle cx="184" cy="176" r="22" fill="none" stroke="#FFF7ED" stroke-width="10"/>
+  <path d="M199 191l17 17" fill="none" stroke="#FFF7ED" stroke-linecap="round" stroke-width="10"/>
+</svg>

@@ -1,0 +1,10 @@
+interface:
+  display_name: "Ratatui Cheese Review"
+  short_description: "Review this repo from three engineering angles"
+  icon_small: "./assets/icon-small.svg"
+  icon_large: "./assets/icon-large.svg"
+  brand_color: "#E6C15A"
+  default_prompt: "Use $ratatui-cheese-review to review this repo for correctness, Rust best practices, and API design."
+
+policy:
+  allow_implicit_invocation: true
