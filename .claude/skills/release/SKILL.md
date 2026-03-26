@@ -41,7 +41,7 @@ Current version is in:
 
 Update the version in `crates/ratatui-cheese/Cargo.toml`. Then run `cargo check` to regenerate `Cargo.lock`.
 
-If the **major** version changed, also update the version in:
+If the **major or minor** version changed, also update the version in:
 - `README.md` (the `ratatui-cheese = "X.Y"` in the install section)
 - `crates/ratatui-cheese/README.md` (same)
 
