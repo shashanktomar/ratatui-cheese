@@ -6,6 +6,7 @@ alias l := lint
 alias f := fix
 alias w := watch
 alias dc := dead-code
+alias cov := coverage
 
 # List all recipes
 default:
@@ -28,6 +29,7 @@ setup:
 	command -v bacon >/dev/null || cargo install bacon
 	command -v cargo-nextest >/dev/null || cargo install --locked cargo-nextest
 	command -v cargo-outdated >/dev/null || cargo install cargo-outdated
+	command -v cargo-llvm-cov >/dev/null || cargo install cargo-llvm-cov
 
 	echo "🎬 Installing vhs..."
 	command -v vhs >/dev/null || brew install charmbracelet/tap/vhs
@@ -71,6 +73,11 @@ test $RUST_BACKTRACE="1":
 lint:
 	cargo fmt --check
 	cargo clippy --all-targets -- -D warnings
+
+# Generate test coverage summary
+[group('dev')]
+coverage:
+	cargo llvm-cov --lib -p ratatui-cheese
 
 # Search for #[allow(dead_code)] occurrences
 [group('dev')]

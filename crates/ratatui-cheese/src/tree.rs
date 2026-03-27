@@ -28,7 +28,7 @@
 use std::fmt;
 
 use crate::theme::Palette;
-use crate::utils::display_width;
+use crate::utils::{display_width, truncate_with_ellipsis};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Style, Styled};
@@ -574,38 +574,6 @@ fn flat_index_of(rows: &[VisibleRow<'_>], selected: (usize, Option<usize>)) -> u
     rows.iter()
         .position(|r| r.group_index() == selected.0 && r.child_index() == selected.1)
         .unwrap_or(0)
-}
-
-/// Truncates text to fit within `max_width` terminal cells, appending ellipsis if needed.
-fn truncate_with_ellipsis(text: &str, max_width: usize, ellipsis: &str) -> String {
-    let text_w = display_width(text);
-    if text_w <= max_width {
-        return text.to_string();
-    }
-    let ellipsis_w = display_width(ellipsis);
-    if max_width <= ellipsis_w {
-        // Not enough space even for the ellipsis — just return what fits.
-        return take_width(text, max_width);
-    }
-    let target = max_width - ellipsis_w;
-    let mut result = take_width(text, target);
-    result.push_str(ellipsis);
-    result
-}
-
-/// Takes characters from `text` up to `max_width` terminal cells.
-fn take_width(text: &str, max_width: usize) -> String {
-    let mut result = String::new();
-    let mut w = 0;
-    for ch in text.chars() {
-        let cw = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
-        if w + cw > max_width {
-            break;
-        }
-        result.push(ch);
-        w += cw;
-    }
-    result
 }
 
 // ---------------------------------------------------------------------------

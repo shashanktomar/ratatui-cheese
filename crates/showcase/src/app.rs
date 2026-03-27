@@ -9,6 +9,7 @@ use ratatui_cheese::theme::Palette;
 
 use crate::widgets::Component;
 use crate::widgets::help::HelpComponent;
+use crate::widgets::list::ListComponent;
 use crate::widgets::paginator::PaginatorComponent;
 use crate::widgets::spinner::SpinnerComponent;
 use crate::widgets::tree::TreeComponent;
@@ -29,6 +30,7 @@ impl App {
                 Box::new(HelpComponent::new()),
                 Box::new(TreeComponent::new()),
                 Box::new(PaginatorComponent::new()),
+                Box::new(ListComponent::new()),
             ],
             selected: 0,
             show_help: false,
