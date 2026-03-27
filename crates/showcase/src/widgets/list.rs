@@ -12,6 +12,18 @@ use ratatui_cheese::theme::Palette;
 
 use super::Component;
 
+fn truncate_desc(text: &str, max_width: usize) -> String {
+    if text.len() <= max_width {
+        return text.to_string();
+    }
+    if max_width <= 1 {
+        return "…".to_string();
+    }
+    let mut result: String = text.chars().take(max_width - 1).collect();
+    result.push('…');
+    result
+}
+
 // ---------------------------------------------------------------------------
 // Item types
 // ---------------------------------------------------------------------------
@@ -61,6 +73,7 @@ struct DetailItem {
     category: String,
     designation: String,
     distance: String,
+    favorited: bool,
 }
 
 impl DetailItem {
@@ -71,7 +84,12 @@ impl DetailItem {
             category: category.to_string(),
             designation: designation.to_string(),
             distance: distance.to_string(),
+            favorited: false,
         }
+    }
+
+    fn toggle_favorite(&mut self) {
+        self.favorited = !self.favorited;
     }
 }
 
@@ -84,24 +102,35 @@ impl ListItem for DetailItem {
         let p = &ctx.palette;
         let title_fg = if ctx.selected { p.primary } else { p.foreground };
 
-        // Line 1: title · description
+        // Line 1: title · description  ★
         buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
         let sep_x = area.x + self.title.len() as u16;
         buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
+        let desc_x = sep_x + 3;
         buf.set_string(
-            sep_x + 3,
+            desc_x,
             area.y,
             &self.description,
             Style::default().fg(p.muted),
         );
+        if self.favorited {
+            let star_x = (area.x + area.width).saturating_sub(1);
+            buf.set_string(star_x, area.y, "★", Style::default().fg(p.primary));
+        }
 
-        // Line 2: category  ·  designation  ·  distance
+        // Line 2: category · designation · distance  (+ hint when selected)
         if area.height > 1 {
             let meta = format!(
                 "{}  ·  {}  ·  {}",
                 self.category, self.designation, self.distance
             );
             buf.set_string(area.x, area.y + 1, &meta, Style::default().fg(p.faint));
+
+            if ctx.selected {
+                let hint = "[f]avorite";
+                let hint_x = (area.x + area.width).saturating_sub(hint.len() as u16);
+                buf.set_string(hint_x, area.y + 1, hint, Style::default().fg(p.faint));
+            }
         }
     }
 }
@@ -140,22 +169,23 @@ impl ListItem for SeparatedDetailItem {
             (p.foreground, p.faint, p.faint)
         };
 
-        // Left side: title · description
-        buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
-        let sep_x = area.x + self.title.len() as u16;
-        buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
-        buf.set_string(
-            sep_x + 3,
-            area.y,
-            &self.description,
-            Style::default().fg(desc_fg),
-        );
-
-        // Right side: category · designation · distance
         let right = format!(
             "{} · {} · {}",
             self.category, self.designation, self.distance
         );
+        let gap = 3u16;
+
+        // Left side: title · description (truncated to fit before right side)
+        buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
+        let sep_x = area.x + self.title.len() as u16;
+        buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
+        let desc_x = sep_x + 3;
+        let max_desc =
+            (area.x + area.width).saturating_sub(desc_x + right.len() as u16 + gap) as usize;
+        let desc = truncate_desc(&self.description, max_desc);
+        buf.set_string(desc_x, area.y, &desc, Style::default().fg(desc_fg));
+
+        // Right side: category · designation · distance
         let right_x = (area.x + area.width).saturating_sub(right.len() as u16);
         buf.set_string(right_x, area.y, &right, Style::default().fg(meta_fg));
 
@@ -201,22 +231,23 @@ impl ListItem for DenseItem {
             (p.foreground, p.faint, p.faint)
         };
 
-        // Left: title · description
-        buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
-        let sep_x = area.x + self.title.len() as u16;
-        buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
-        buf.set_string(
-            sep_x + 3,
-            area.y,
-            &self.description,
-            Style::default().fg(desc_fg),
-        );
-
-        // Right: category · designation · distance
         let right = format!(
             "{} · {} · {}",
             self.category, self.designation, self.distance
         );
+        let gap = 3u16;
+
+        // Left: title · description (truncated to fit before right side)
+        buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
+        let sep_x = area.x + self.title.len() as u16;
+        buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
+        let desc_x = sep_x + 3;
+        let max_desc =
+            (area.x + area.width).saturating_sub(desc_x + right.len() as u16 + gap) as usize;
+        let desc = truncate_desc(&self.description, max_desc);
+        buf.set_string(desc_x, area.y, &desc, Style::default().fg(desc_fg));
+
+        // Right: category · designation · distance
         let right_x = (area.x + area.width).saturating_sub(right.len() as u16);
         buf.set_string(right_x, area.y, &right, Style::default().fg(meta_fg));
     }
@@ -563,6 +594,15 @@ impl ListComponent {
         }
     }
 
+    fn toggle_favorite(&mut self) {
+        let selected = self.state_mut().selected();
+        if let DemoKind::Detail { items, .. } = &mut self.demos[self.current]
+            && selected < items.len()
+        {
+            items[selected].toggle_favorite();
+        }
+    }
+
     fn state_mut(&mut self) -> &mut ListState {
         match &mut self.demos[self.current] {
             DemoKind::TwoLine { state, .. }
@@ -588,6 +628,7 @@ impl Component for ListComponent {
             KeyCode::Char('N') => self.state_mut().select_prev(count, false),
             KeyCode::Char('l') | KeyCode::Right => self.state_mut().next_page(count),
             KeyCode::Char('h') | KeyCode::Left => self.state_mut().prev_page(count),
+            KeyCode::Char('f') => self.toggle_favorite(),
             KeyCode::Char('g') => self.state_mut().select_first_on_page(),
             KeyCode::Char('G') => self.state_mut().select_last_on_page(count),
             _ => {}
@@ -674,7 +715,7 @@ impl Component for ListComponent {
         // Help
         if let Some(help_area) = help_area {
             let help = Line::from(Span::styled(
-                "n/N: select • g/G: top/bottom • h/l: page • c: cycle example",
+                "n/N: select • g/G: top/bottom • h/l: page • f: fav • c: cycle",
                 Style::default().fg(palette.faint),
             ));
             help.render(help_area, frame.buffer_mut());
