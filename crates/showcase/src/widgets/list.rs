@@ -5,7 +5,9 @@ use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Padding, StatefulWidget, Widget};
-use ratatui_cheese::list::{List, ListItem, ListItemContext, ListState};
+use ratatui_cheese::list::{
+    DefaultHeader, List, ListHeader, ListHeaderContext, ListItem, ListItemContext, ListState,
+};
 use ratatui_cheese::theme::Palette;
 
 use super::Component;
@@ -250,12 +252,46 @@ impl ListItem for NumberedItem {
     }
 }
 
+/// Custom header with a highlighted title bar and item count.
+struct StyledHeader {
+    title: String,
+}
+
+impl StyledHeader {
+    fn new(title: &str) -> Self {
+        Self {
+            title: title.to_string(),
+        }
+    }
+}
+
+impl ListHeader for StyledHeader {
+    fn height(&self) -> u16 {
+        4 // title + blank + count + blank
+    }
+
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListHeaderContext) {
+        let p = &ctx.palette;
+
+        // Title with background highlight
+        let title_style = Style::default().fg(p.on_highlight).bg(p.highlight);
+        let padded = format!(" {} ", self.title);
+        buf.set_string(area.x + 2, area.y, &padded, title_style);
+
+        // Count
+        if area.height > 2 {
+            let count_text = format!("{} items", ctx.total_items);
+            buf.set_string(area.x + 2, area.y + 2, &count_text, Style::default().fg(p.muted));
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Demo configurations
 // ---------------------------------------------------------------------------
 
 const EXAMPLE_NAMES: &[&str] = &[
-    "Two-Line Items",
+    "Styled Header",
     "Detail Cards",
     "With Line Separator",
     "Dense",
@@ -464,7 +500,7 @@ impl Component for ListComponent {
         let example_name = EXAMPLE_NAMES[self.current];
         let block = Block::bordered()
             .title(format!(" List: {example_name} "))
-            .padding(Padding::new(2, 2, 1, 1));
+            .padding(Padding::new(2, 2, 1, 0));
         let inner = block.inner(area);
         frame.render_widget(block, area);
 
@@ -472,56 +508,64 @@ impl Component for ListComponent {
             return;
         }
 
-        let [list_area, _, help_area] = Layout::vertical([
-            Constraint::Min(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-        ])
-        .areas(inner);
+        // Cap list to roughly half so pagination is always visible
+        let max_list_height = inner.height / 2;
+
+        let (list_area, help_area) = if inner.height > 3 {
+            let [la, _, ha] = Layout::vertical([
+                Constraint::Max(max_list_height),
+                Constraint::Min(1),
+                Constraint::Length(1),
+            ])
+            .areas(inner);
+            (la, Some(ha))
+        } else {
+            (inner, None)
+        };
 
         // Render the current demo
         match &mut self.demos[self.current] {
             DemoKind::TwoLine { items, state } => {
+                let header = StyledHeader::new("Development Boards");
                 let list = List::new(items.as_slice())
-                    .title("Development Boards")
-                    .show_count(true)
+                    .header(&header)
                     .palette(palette.clone());
                 StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
             }
             DemoKind::Detail { items, state } => {
+                let header = DefaultHeader::new("Celestial Objects").show_count(true);
                 let list = List::new(items.as_slice())
-                    .title("Celestial Objects")
-                    .show_count(true)
+                    .header(&header)
                     .palette(palette.clone());
                 StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
             }
             DemoKind::Separated { items, state } => {
+                let header = DefaultHeader::new("Celestial Objects").show_count(true);
                 let list = List::new(items.as_slice())
-                    .title("Celestial Objects")
-                    .show_count(true)
+                    .header(&header)
                     .item_spacing(0)
                     .palette(palette.clone());
                 StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
             }
             DemoKind::Dense { items, state } => {
+                let header = DefaultHeader::new("Celestial Objects").show_count(true);
                 let list = List::new(items.as_slice())
-                    .title("Celestial Objects")
-                    .show_count(true)
+                    .header(&header)
                     .item_spacing(0)
                     .palette(palette.clone());
                 StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
             }
             DemoKind::Simple { items, state } => {
+                let header = DefaultHeader::new("Programming Languages").show_count(true);
                 let list = List::new(items.as_slice())
-                    .title("Programming Languages")
-                    .show_count(true)
+                    .header(&header)
                     .palette(palette.clone());
                 StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
             }
             DemoKind::Numbered { items, state } => {
+                let header = DefaultHeader::new("Programming Languages").show_count(true);
                 let list = List::new(items.as_slice())
-                    .title("Programming Languages")
-                    .show_count(true)
+                    .header(&header)
                     .item_spacing(0)
                     .selection_indicator(">")
                     .palette(palette.clone());
@@ -530,7 +574,7 @@ impl Component for ListComponent {
         }
 
         // Help
-        if help_area.height > 0 {
+        if let Some(help_area) = help_area {
             let help = Line::from(Span::styled(
                 "n/N: select • g/G: top/bottom • h/l: page • c: cycle example",
                 Style::default().fg(palette.faint),

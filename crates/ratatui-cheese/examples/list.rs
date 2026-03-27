@@ -7,7 +7,9 @@ use ratatui::style::Style;
 use ratatui::widgets::{StatefulWidget, Widget};
 use ratatui::{DefaultTerminal, Frame, buffer::Buffer};
 use ratatui_cheese::help::{Binding, Help};
-use ratatui_cheese::list::{List, ListItem, ListItemContext, ListState};
+use ratatui_cheese::list::{
+    DefaultHeader, List, ListHeader, ListHeaderContext, ListItem, ListItemContext, ListState,
+};
 use ratatui_cheese::theme::Palette;
 
 // ---------------------------------------------------------------------------
@@ -195,6 +197,40 @@ impl ListItem for DenseItem {
     }
 }
 
+/// Custom header with a highlighted title bar and item count.
+struct StyledHeader {
+    title: String,
+}
+
+impl StyledHeader {
+    fn new(title: &str) -> Self {
+        Self {
+            title: title.to_string(),
+        }
+    }
+}
+
+impl ListHeader for StyledHeader {
+    fn height(&self) -> u16 {
+        4 // title + blank + count + blank
+    }
+
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListHeaderContext) {
+        let p = &ctx.palette;
+
+        // Title with background highlight
+        let title_style = Style::default().fg(p.on_highlight).bg(p.highlight);
+        let padded = format!(" {} ", self.title);
+        buf.set_string(area.x + 2, area.y, &padded, title_style);
+
+        // Count
+        if area.height > 2 {
+            let count_text = format!("{} items", ctx.total_items);
+            buf.set_string(area.x + 2, area.y + 2, &count_text, Style::default().fg(p.muted));
+        }
+    }
+}
+
 struct SimpleItem(String);
 
 impl SimpleItem {
@@ -249,7 +285,7 @@ impl ListItem for NumberedItem {
 // ---------------------------------------------------------------------------
 
 const EXAMPLE_NAMES: &[&str] = &[
-    "Two-Line Items",
+    "Styled Header",
     "Detail Cards",
     "With Line Separator",
     "Dense",
@@ -505,46 +541,46 @@ fn draw(frame: &mut Frame, app: &mut App) {
     // Render the current demo
     match &mut app.demos[app.current] {
         DemoKind::TwoLine { items, state } => {
+            let header = StyledHeader::new("Development Boards");
             let list = List::new(items.as_slice())
-                .title("Development Boards")
-                .show_count(true)
+                .header(&header)
                 .palette(palette.clone());
             StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
         }
         DemoKind::Detail { items, state } => {
+            let header = DefaultHeader::new("Celestial Objects").show_count(true);
             let list = List::new(items.as_slice())
-                .title("Celestial Objects")
-                .show_count(true)
+                .header(&header)
                 .palette(palette.clone());
             StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
         }
         DemoKind::Separated { items, state } => {
+            let header = DefaultHeader::new("Celestial Objects").show_count(true);
             let list = List::new(items.as_slice())
-                .title("Celestial Objects")
-                .show_count(true)
+                .header(&header)
                 .item_spacing(0)
                 .palette(palette.clone());
             StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
         }
         DemoKind::Dense { items, state } => {
+            let header = DefaultHeader::new("Celestial Objects").show_count(true);
             let list = List::new(items.as_slice())
-                .title("Celestial Objects")
-                .show_count(true)
+                .header(&header)
                 .item_spacing(0)
                 .palette(palette.clone());
             StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
         }
         DemoKind::Simple { items, state } => {
+            let header = DefaultHeader::new("Programming Languages").show_count(true);
             let list = List::new(items.as_slice())
-                .title("Programming Languages")
-                .show_count(true)
+                .header(&header)
                 .palette(palette.clone());
             StatefulWidget::render(&list, list_area, frame.buffer_mut(), state);
         }
         DemoKind::Compact { items, state } => {
+            let header = DefaultHeader::new("Programming Languages").show_count(true);
             let list = List::new(items.as_slice())
-                .title("Programming Languages")
-                .show_count(true)
+                .header(&header)
                 .item_spacing(0)
                 .selection_indicator(">")
                 .palette(palette.clone());

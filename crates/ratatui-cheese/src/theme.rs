@@ -38,6 +38,8 @@ use ratatui::style::Color;
 /// | `secondary` | Second accent (headings, filenames, labels)      |
 /// | `surface`   | Raised background (selected row, hover)          |
 /// | `border`    | Borders, dividers                                |
+/// | `highlight` | Bold background (title bars, badges)             |
+/// | `on_highlight`| Text on `highlight` background                 |
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Palette {
     /// Primary text color.
@@ -54,6 +56,10 @@ pub struct Palette {
     pub surface: Color,
     /// Borders, dividers.
     pub border: Color,
+    /// Bold background color (title bars, badges, active states).
+    pub highlight: Color,
+    /// Text color for content on `highlight` background.
+    pub on_highlight: Color,
 }
 
 impl Default for Palette {
@@ -74,6 +80,8 @@ impl Palette {
             secondary: Color::Indexed(141),
             surface: Color::Indexed(237),
             border: Color::Indexed(238),
+            highlight: Color::Indexed(141),
+            on_highlight: Color::Indexed(235),
         }
     }
 
@@ -88,6 +96,8 @@ impl Palette {
             secondary: Color::Indexed(97),
             surface: Color::Indexed(254),
             border: Color::Indexed(250),
+            highlight: Color::Indexed(97),
+            on_highlight: Color::Indexed(255),
         }
     }
 
@@ -104,6 +114,8 @@ impl Palette {
             secondary: Color::Rgb(0x7D, 0x56, 0xF4),
             surface: Color::Indexed(237),
             border: Color::Indexed(238),
+            highlight: Color::Rgb(0x7D, 0x56, 0xF4),
+            on_highlight: Color::Rgb(0xFA, 0xFA, 0xFA),
         }
     }
 
@@ -118,6 +130,8 @@ impl Palette {
             secondary: Color::Rgb(0x5F, 0xAF, 0xFF),
             surface: Color::Indexed(236),
             border: Color::Indexed(238),
+            highlight: Color::Rgb(0x5F, 0xAF, 0xFF),
+            on_highlight: Color::Indexed(235),
         }
     }
 
@@ -132,6 +146,8 @@ impl Palette {
             secondary: Color::Rgb(0xFF, 0xD7, 0x00),
             surface: Color::Indexed(236),
             border: Color::Indexed(239),
+            highlight: Color::Rgb(0xFF, 0x87, 0x5F),
+            on_highlight: Color::Indexed(235),
         }
     }
 

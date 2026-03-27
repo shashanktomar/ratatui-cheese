@@ -79,16 +79,108 @@ pub trait ListItem {
 }
 
 // ---------------------------------------------------------------------------
+// ListHeader trait
+// ---------------------------------------------------------------------------
+
+/// Context passed to the header during rendering.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ListHeaderContext {
+    /// Total number of items in the list.
+    pub total_items: usize,
+    /// Current page (0-indexed).
+    pub page: usize,
+    /// Total number of pages.
+    pub total_pages: usize,
+    /// The palette from the parent list.
+    pub palette: Palette,
+}
+
+/// A trait for custom headers rendered above list items.
+///
+/// Implement this to control the header area of a [`List`]. The header
+/// receives context about the list state (total items, pagination) and
+/// the palette for consistent theming.
+pub trait ListHeader {
+    /// Total height in rows this header occupies.
+    fn height(&self) -> u16;
+
+    /// Render the header into the given area.
+    fn render(&self, area: Rect, buf: &mut Buffer, context: &ListHeaderContext);
+}
+
+// ---------------------------------------------------------------------------
+// DefaultHeader
+// ---------------------------------------------------------------------------
+
+/// A simple header that renders a title and optional item count.
+///
+/// This covers the common case. For full control, implement [`ListHeader`]
+/// directly.
+///
+/// # Example
+///
+/// ```rust
+/// use ratatui_cheese::list::DefaultHeader;
+///
+/// let header = DefaultHeader::new("My List").show_count(true);
+/// ```
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct DefaultHeader {
+    title: String,
+    show_count: bool,
+}
+
+impl DefaultHeader {
+    /// Creates a new header with the given title.
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            show_count: false,
+        }
+    }
+
+    /// Sets whether to show the item count below the title.
+    #[must_use = "method moves the value of self and returns the modified value"]
+    pub fn show_count(mut self, show: bool) -> Self {
+        self.show_count = show;
+        self
+    }
+}
+
+impl ListHeader for DefaultHeader {
+    fn height(&self) -> u16 {
+        let mut h: u16 = 2; // title + blank line
+        if self.show_count {
+            h += 2; // count + blank line
+        }
+        h
+    }
+
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListHeaderContext) {
+        let p = &ctx.palette;
+        let indent: u16 = 2;
+        let x = area.x + indent;
+        let max_w = area.width.saturating_sub(indent) as usize;
+
+        let truncated = truncate_with_ellipsis(&self.title, max_w, "…");
+        buf.set_string(x, area.y, &truncated, Style::default().fg(p.foreground));
+
+        if self.show_count && area.height > 2 {
+            let count_text = format!("{} items", ctx.total_items);
+            let truncated = truncate_with_ellipsis(&count_text, max_w, "…");
+            buf.set_string(x, area.y + 2, &truncated, Style::default().fg(p.muted));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
 
-/// Styles for the different parts of the list widget.
+/// Style for the selection indicator.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ListStyles {
-    /// Style for the title text.
-    pub title: Style,
-    /// Style for the item count text.
-    pub count: Style,
     /// Style for the selection indicator.
     pub selected: Style,
 }
@@ -104,8 +196,6 @@ impl ListStyles {
     #[must_use]
     pub fn from_palette(p: &Palette) -> Self {
         Self {
-            title: Style::default().fg(p.foreground),
-            count: Style::default().fg(p.muted),
             selected: Style::default().fg(p.primary),
         }
     }
@@ -152,13 +242,11 @@ impl ListStyles {
 /// let list = List::new(&items);
 /// let mut state = ListState::new(items.len());
 /// ```
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct List<'a, T: ListItem> {
     items: &'a [T],
+    header: Option<&'a dyn ListHeader>,
     styles: ListStyles,
     palette: Palette,
-    title: Option<String>,
-    show_count: bool,
     show_paginator: bool,
     paginator: Paginator,
     selection_indicator: String,
@@ -172,10 +260,9 @@ impl<'a, T: ListItem> List<'a, T> {
     pub fn new(items: &'a [T]) -> Self {
         Self {
             items,
+            header: None,
             styles: ListStyles::default(),
             palette: Palette::default(),
-            title: None,
-            show_count: false,
             show_paginator: true,
             paginator: Paginator::default(),
             selection_indicator: "│".into(),
@@ -188,6 +275,17 @@ impl<'a, T: ListItem> List<'a, T> {
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn items(mut self, items: &'a [T]) -> Self {
         self.items = items;
+        self
+    }
+
+    /// Sets a custom header that controls its own rendering.
+    ///
+    /// When set, the custom header replaces the built-in title and count.
+    /// The header receives a [`ListHeaderContext`] with item count,
+    /// pagination info, and the palette.
+    #[must_use = "method moves the value of self and returns the modified value"]
+    pub fn header(mut self, header: &'a dyn ListHeader) -> Self {
+        self.header = Some(header);
         self
     }
 
@@ -210,19 +308,6 @@ impl<'a, T: ListItem> List<'a, T> {
         self
     }
 
-    /// Sets a title displayed above the list.
-    #[must_use = "method moves the value of self and returns the modified value"]
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = Some(title.into());
-        self
-    }
-
-    /// Sets whether to show the item count below the title.
-    #[must_use = "method moves the value of self and returns the modified value"]
-    pub fn show_count(mut self, show: bool) -> Self {
-        self.show_count = show;
-        self
-    }
 
     /// Sets whether to show the paginator at the bottom.
     ///
@@ -273,11 +358,11 @@ impl<T: ListItem> Styled for List<'_, T> {
     type Item = Self;
 
     fn style(&self) -> Style {
-        self.styles.title
+        self.styles.selected
     }
 
     fn set_style<S: Into<Style>>(mut self, style: S) -> Self::Item {
-        self.styles.title = style.into();
+        self.styles.selected = style.into();
         self
     }
 }
@@ -470,20 +555,7 @@ impl<T: ListItem> StatefulWidget for &List<'_, T> {
         }
 
         // 1. Calculate chrome height (excluding paginator — added only if needed)
-        let mut chrome_height: u16 = 0;
-        let title_indent: u16 = 2; // matches Go's PaddingLeft(2)
-
-        // Title row
-        if self.title.is_some() {
-            chrome_height += 1; // title line
-            chrome_height += 1; // blank line after title
-        }
-
-        // Count row
-        if self.show_count {
-            chrome_height += 1; // count line
-            chrome_height += 1; // blank line after count
-        }
+        let chrome_height: u16 = self.header.map_or(0, |h| h.height());
 
         let paginator_chrome: u16 = 2; // blank line + paginator line
 
@@ -524,25 +596,20 @@ impl<T: ListItem> StatefulWidget for &List<'_, T> {
 
         let mut y = area.y;
 
-        // 4. Render title
-        if let Some(ref title) = self.title {
-            let x = area.x + title_indent;
-            let max_w = area.width.saturating_sub(title_indent);
-            let truncated = truncate_with_ellipsis(title, max_w as usize, "…");
-            buf.set_string(x, y, &truncated, self.styles.title);
-            y += 1;
-            y += 1; // blank line
-        }
-
-        // 5. Render count
-        if self.show_count {
-            let count_text = format!("{} items", self.items.len());
-            let x = area.x + title_indent;
-            let max_w = area.width.saturating_sub(title_indent);
-            let truncated = truncate_with_ellipsis(&count_text, max_w as usize, "…");
-            buf.set_string(x, y, &truncated, self.styles.count);
-            y += 1;
-            y += 1; // blank line
+        // 4. Render header
+        if let Some(header) = self.header {
+            let header_h = header.height();
+            if header_h > 0 {
+                let header_area = Rect::new(area.x, y, area.width, header_h);
+                let header_ctx = ListHeaderContext {
+                    total_items: self.items.len(),
+                    page: state.paginator.page(),
+                    total_pages: state.paginator.total_pages(),
+                    palette: self.palette.clone(),
+                };
+                header.render(header_area, buf, &header_ctx);
+                y += header_h;
+            }
         }
 
         // 6. Render items
@@ -588,8 +655,9 @@ impl<T: ListItem> StatefulWidget for &List<'_, T> {
         if needs_paginator && state.paginator.total_pages() > 1 {
             y += 1; // blank line before paginator
             if y < area.y + area.height {
-                let pag_x = area.x + title_indent;
-                let pag_w = area.width.saturating_sub(title_indent);
+                let pag_indent: u16 = 2;
+                let pag_x = area.x + pag_indent;
+                let pag_w = area.width.saturating_sub(pag_indent);
                 let pag_area = Rect::new(pag_x, y, pag_w, 1);
                 StatefulWidget::render(&self.paginator, pag_area, buf, &mut state.paginator);
             }
@@ -894,11 +962,12 @@ mod tests {
     }
 
     #[test]
-    fn render_with_title() {
+    fn render_with_default_header() {
         let items = vec![TestItem::new("Apple"), TestItem::new("Banana")];
-        let list = List::new(&items).title("Fruits");
+        let header = DefaultHeader::new("Fruits");
+        let list = List::new(&items).header(&header);
         let mut state = ListState::new(items.len());
-        // title(1) + blank(1) + 2 items + 1 gap = 5
+        // header(2) + 2 items + 1 gap = 5
         let buf = render_list(&list, &mut state, 20, 5);
 
         assert_eq!(row_text(&buf, 0), "  Fruits");
@@ -909,11 +978,12 @@ mod tests {
     }
 
     #[test]
-    fn render_with_title_and_count() {
+    fn render_with_default_header_and_count() {
         let items = vec![TestItem::new("Apple"), TestItem::new("Banana")];
-        let list = List::new(&items).title("Fruits").show_count(true);
+        let header = DefaultHeader::new("Fruits").show_count(true);
+        let list = List::new(&items).header(&header);
         let mut state = ListState::new(items.len());
-        // title(1) + blank(1) + count(1) + blank(1) + 2 items + 1 gap = 7
+        // header(4) + 2 items + 1 gap = 7
         let buf = render_list(&list, &mut state, 20, 7);
 
         assert_eq!(row_text(&buf, 0), "  Fruits");
@@ -987,6 +1057,71 @@ mod tests {
         assert_eq!(row_text(&buf, 2), "  B");
     }
 
+    // -- Custom header tests --
+
+    struct TestHeader;
+
+    impl ListHeader for TestHeader {
+        fn height(&self) -> u16 {
+            2
+        }
+
+        fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListHeaderContext) {
+            buf.set_string(area.x, area.y, "My List", Style::default());
+            let count = format!("{} items", ctx.total_items);
+            buf.set_string(area.x, area.y + 1, &count, Style::default());
+        }
+    }
+
+    #[test]
+    fn render_custom_header() {
+        let items = vec![TestItem::new("Apple"), TestItem::new("Banana")];
+        let header = TestHeader;
+        let list = List::new(&items).header(&header);
+        let mut state = ListState::new(items.len());
+        // header(2) + 2 items + 1 gap = 5
+        let buf = render_list(&list, &mut state, 20, 5);
+
+        assert_eq!(row_text(&buf, 0), "My List");
+        assert_eq!(row_text(&buf, 1), "2 items");
+        assert_eq!(row_text(&buf, 2), "│ Apple");
+        assert_eq!(row_text(&buf, 3), ""); // spacing
+        assert_eq!(row_text(&buf, 4), "  Banana");
+    }
+
+    #[test]
+    fn render_custom_header_context() {
+        let items = vec![
+            TestItem::new("A"),
+            TestItem::new("B"),
+            TestItem::new("C"),
+            TestItem::new("D"),
+        ];
+
+        struct ContextCheckHeader;
+        impl ListHeader for ContextCheckHeader {
+            fn height(&self) -> u16 { 1 }
+            fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListHeaderContext) {
+                let text = format!(
+                    "total={} page={} pages={}",
+                    ctx.total_items, ctx.page, ctx.total_pages
+                );
+                buf.set_string(area.x, area.y, &text, Style::default());
+            }
+        }
+
+        let header = ContextCheckHeader;
+        let list = List::new(&items).header(&header);
+        let mut state = ListState::new(items.len());
+        // header(1) + items_area(4) = 5, but with spacing items need more
+        // 4 items need 4+3=7 rows with spacing, only 4 available → paginated
+        let buf = render_list(&list, &mut state, 40, 5);
+
+        // Should show pagination info in header
+        let header_text = row_text(&buf, 0);
+        assert!(header_text.starts_with("total=4 page=0"));
+    }
+
     // -- Styles tests --
 
     #[test]
@@ -998,8 +1133,6 @@ mod tests {
     fn styles_from_palette() {
         let p = Palette::charm();
         let styles = ListStyles::from_palette(&p);
-        assert_eq!(styles.title, Style::default().fg(p.foreground));
-        assert_eq!(styles.count, Style::default().fg(p.muted));
         assert_eq!(styles.selected, Style::default().fg(p.primary));
     }
 
@@ -1009,6 +1142,6 @@ mod tests {
     fn styled_trait() {
         let items: Vec<TestItem> = vec![];
         let list = List::new(&items);
-        assert_eq!(list.style(), ListStyles::dark().title);
+        assert_eq!(list.style(), ListStyles::dark().selected);
     }
 }
