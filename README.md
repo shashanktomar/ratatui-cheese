@@ -49,6 +49,14 @@ Page indicator with dot and arabic display modes. Tracks pagination state and pr
 
 [Usage & docs](crates/ratatui-cheese/README.md#paginator)
 
+### List
+
+Paginated list with item delegation. Each item controls its own rendering via the `ListItem` trait. Supports custom headers, configurable selection indicators, and palette-based theming.
+
+![List](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/list.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#list)
+
 ## Examples
 
 Run the showcase to see all widgets in action:

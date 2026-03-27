@@ -158,6 +158,60 @@ let mut state = PaginatorState::new(100, 10); // 100 items, 10 per page
 cargo run --example paginator
 ```
 
+### List
+
+Paginated list with item delegation. Each item implements the `ListItem` trait to control its own height and rendering. Supports custom headers via the `ListHeader` trait, configurable selection indicators, item spacing, and palette-based theming. Uses the Paginator widget internally.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::prelude::*;
+use ratatui_cheese::list::{DefaultHeader, List, ListItem, ListItemContext, ListState};
+use ratatui_cheese::theme::Palette;
+
+struct Item(String);
+impl ListItem for Item {
+    fn height(&self) -> u16 { 1 }
+    fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListItemContext) {
+        let p = &ctx.palette;
+        let style = if ctx.selected {
+            Style::default().fg(p.primary)
+        } else {
+            Style::default().fg(p.foreground)
+        };
+        buf.set_string(area.x, area.y, &self.0, style);
+    }
+}
+
+let items = vec![Item("Apple".into()), Item("Banana".into())];
+let header = DefaultHeader::new("Fruits").show_count(true);
+let list = List::new(&items)
+    .header(&header)
+    .palette(Palette::charm());
+
+let mut state = ListState::new(items.len());
+
+// Navigation:
+// state.select_next(items.len(), false);
+// state.select_prev(items.len(), false);
+// state.next_page(items.len());
+// state.prev_page(items.len());
+
+// In your draw function:
+// frame.render_stateful_widget(&list, area, &mut state);
+```
+
+</details>
+
+![List](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/list.gif)
+
+```sh
+cargo run --example list
+```
+
 ## License
 
 MIT
