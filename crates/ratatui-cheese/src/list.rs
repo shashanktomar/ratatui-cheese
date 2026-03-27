@@ -7,6 +7,10 @@
 //!
 //! Ported from Charmbracelet's [Bubbles list](https://github.com/charmbracelet/bubbles/tree/master/list).
 //!
+//! Pagination assumes all items have uniform height. If items return
+//! different values from [`ListItem::height()`], page boundaries may be
+//! unpredictable.
+//!
 //! # Example
 //!
 //! ```rust
@@ -63,19 +67,19 @@ pub struct ListItemContext {
 /// A trait for items that can be rendered inside a [`List`].
 ///
 /// Implement this to control how each item appears and how tall it is.
+///
+/// **Note:** All items in a list should return the same value from
+/// [`height()`](Self::height). Pagination assumes uniform item heights;
+/// if items have different heights, page boundaries may be unpredictable.
 pub trait ListItem {
     /// Height in rows this item occupies.
+    ///
+    /// All items in a list should return the same height. Mixed heights
+    /// may cause pagination to over- or under-fill pages.
     fn height(&self) -> u16;
 
     /// Render this item into the given area.
     fn render(&self, area: Rect, buf: &mut Buffer, context: &ListItemContext);
-
-    /// Handle a key event. Returns true if consumed.
-    ///
-    /// Default implementation does nothing and returns false.
-    fn handle_key(&mut self, _key: crossterm::event::KeyCode) -> bool {
-        false
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +253,7 @@ pub struct List<'a, T: ListItem> {
     palette: Palette,
     show_paginator: bool,
     paginator: Paginator,
+    styles_overridden: bool,
     selection_indicator: String,
     infinite_scrolling: bool,
     item_spacing: u16,
@@ -265,6 +270,7 @@ impl<'a, T: ListItem> List<'a, T> {
             palette: Palette::default(),
             show_paginator: true,
             paginator: Paginator::default(),
+            styles_overridden: false,
             selection_indicator: "│".into(),
             infinite_scrolling: false,
             item_spacing: 1,
@@ -293,21 +299,24 @@ impl<'a, T: ListItem> List<'a, T> {
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn styles(mut self, styles: ListStyles) -> Self {
         self.styles = styles;
+        self.styles_overridden = true;
         self
     }
 
-    /// Sets the palette, which is passed to items via [`ListItemContext`]
-    /// so they can render with consistent theming.
+    /// Sets the palette, which is passed to items and headers via
+    /// [`ListItemContext`] and [`ListHeaderContext`] for consistent theming.
     ///
     /// Also sets the list's styles from this palette via
-    /// [`ListStyles::from_palette`].
+    /// [`ListStyles::from_palette`], unless styles were already set
+    /// explicitly with [`styles()`](Self::styles).
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn palette(mut self, palette: Palette) -> Self {
-        self.styles = ListStyles::from_palette(&palette);
+        if !self.styles_overridden {
+            self.styles = ListStyles::from_palette(&palette);
+        }
         self.palette = palette;
         self
     }
-
 
     /// Sets whether to show the paginator at the bottom.
     ///
@@ -413,8 +422,12 @@ impl ListState {
     /// Sets the selected item index.
     ///
     /// Clamps to `item_count - 1` if out of bounds.
-    pub fn select(&mut self, index: usize) {
-        self.selected = index;
+    pub fn select(&mut self, index: usize, item_count: usize) {
+        if item_count == 0 {
+            self.selected = 0;
+        } else {
+            self.selected = index.min(item_count - 1);
+        }
     }
 
     /// Selects the next item. If `infinite` is true, wraps to the first item
@@ -565,8 +578,7 @@ impl<T: ListItem> StatefulWidget for &List<'_, T> {
             return;
         }
 
-        let mut per_page =
-            calculate_per_page(self.items, items_area_height, self.item_spacing);
+        let mut per_page = calculate_per_page(self.items, items_area_height, self.item_spacing);
         if per_page == 0 {
             return;
         }
@@ -670,21 +682,19 @@ impl<T: ListItem> StatefulWidget for &List<'_, T> {
 // ---------------------------------------------------------------------------
 
 /// Calculate how many items fit in the given height, accounting for item
-/// height and spacing between items. Returns 0 if no items exist.
+/// height and spacing between items. Uses the tallest item's height to
+/// ensure every page can fit its items. Returns 0 if no items exist.
 fn calculate_per_page<T: ListItem>(items: &[T], available_height: u16, spacing: u16) -> usize {
     if items.is_empty() {
         return 0;
     }
-    // Use the first item's height as representative
-    let item_h = items[0].height().max(1);
-    let slot = item_h + spacing; // height + gap per item
-    // At least one item if there's enough room for the item itself
-    if available_height < item_h {
+    // Use the tallest item's height so every page fits its items
+    let max_h = items.iter().map(|i| i.height().max(1)).max().unwrap_or(1);
+    let slot = max_h + spacing; // height + gap per item
+    if available_height < max_h {
         return 0;
     }
-    // The last item doesn't need trailing spacing, so:
-    // n items need: n * item_h + (n-1) * spacing = n * slot - spacing
-    // n * slot - spacing <= available_height
+    // n items need: n * max_h + (n-1) * spacing = n * slot - spacing
     // n <= (available_height + spacing) / slot
     ((available_height + spacing) / slot) as usize
 }
@@ -764,8 +774,22 @@ mod tests {
     #[test]
     fn state_select() {
         let mut state = ListState::new(10);
-        state.select(5);
+        state.select(5, 10);
         assert_eq!(state.selected(), 5);
+    }
+
+    #[test]
+    fn state_select_clamps() {
+        let mut state = ListState::new(3);
+        state.select(10, 3);
+        assert_eq!(state.selected(), 2); // clamped to last
+    }
+
+    #[test]
+    fn state_select_zero_items() {
+        let mut state = ListState::new(0);
+        state.select(5, 0);
+        assert_eq!(state.selected(), 0);
     }
 
     #[test]
@@ -780,7 +804,7 @@ mod tests {
     #[test]
     fn state_select_next_clamps() {
         let mut state = ListState::new(3);
-        state.select(2);
+        state.select(2, 3);
         state.select_next(3, false);
         assert_eq!(state.selected(), 2); // stays at end
     }
@@ -788,7 +812,7 @@ mod tests {
     #[test]
     fn state_select_next_wraps() {
         let mut state = ListState::new(3);
-        state.select(2);
+        state.select(2, 3);
         state.select_next(3, true);
         assert_eq!(state.selected(), 0); // wraps
     }
@@ -796,7 +820,7 @@ mod tests {
     #[test]
     fn state_select_prev() {
         let mut state = ListState::new(5);
-        state.select(2);
+        state.select(2, 3);
         state.select_prev(5, false);
         assert_eq!(state.selected(), 1);
     }
@@ -840,7 +864,7 @@ mod tests {
         let mut state = ListState::new(20);
         state.paginator = PaginatorState::new(20, 5);
         state.next_page(20);
-        state.select(7); // middle of page 2
+        state.select(7, 20); // middle of page 2
         state.select_first_on_page();
         assert_eq!(state.selected(), 5); // first item on page 2
     }
@@ -951,7 +975,7 @@ mod tests {
         ];
         let list = List::new(&items);
         let mut state = ListState::new(items.len());
-        state.select(1);
+        state.select(1, items.len());
         let buf = render_list(&list, &mut state, 20, 5);
 
         assert_eq!(row_text(&buf, 0), "  Apple");
@@ -1017,6 +1041,31 @@ mod tests {
         assert_eq!(row_text(&buf, 3), "");
         // row 4: paginator dots
         assert_eq!(row_text(&buf, 4), "  ••");
+    }
+
+    #[test]
+    fn render_mixed_height_items() {
+        // 3 items: heights 1, 2, 1. Total content = 1+2+1 = 4 rows (no spacing).
+        // max_h=2, slot=2. per_page = (4+0)/2 = 2. All 3 items > 2 per_page
+        // → paginator needed. Reduced height = 4-2 = 2, per_page = 1.
+        // So at height 4 we get pagination with 1 item per page.
+        //
+        // Use height 6 instead: per_page = (6+0)/2 = 3 ≥ 3 items → no paginator.
+        // Items render: "Short"(1) + "Tall"(2) + "Short2"(1) = 4 rows, fits in 6.
+        let mut items = vec![
+            TestItem::new("Short"),
+            TestItem::new("Tall"),
+            TestItem::new("Short2"),
+        ];
+        items[1].height = 2;
+        let list = List::new(&items).item_spacing(0);
+        let mut state = ListState::new(items.len());
+        let buf = render_list(&list, &mut state, 20, 6);
+
+        assert_eq!(row_text(&buf, 0), "│ Short");
+        assert_eq!(row_text(&buf, 1), "  Tall");
+        // row 2 is the second line of "Tall" (height=2), empty since render only writes line 0
+        assert_eq!(row_text(&buf, 3), "  Short2");
     }
 
     #[test]
@@ -1100,7 +1149,9 @@ mod tests {
 
         struct ContextCheckHeader;
         impl ListHeader for ContextCheckHeader {
-            fn height(&self) -> u16 { 1 }
+            fn height(&self) -> u16 {
+                1
+            }
             fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListHeaderContext) {
                 let text = format!(
                     "total={} page={} pages={}",

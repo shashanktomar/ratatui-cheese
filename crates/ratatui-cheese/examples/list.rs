@@ -38,10 +38,7 @@ impl ListItem for TwoLineItem {
     fn render(&self, area: Rect, buf: &mut Buffer, ctx: &ListItemContext) {
         let p = &ctx.palette;
         let (title_style, desc_style) = if ctx.selected {
-            (
-                Style::default().fg(p.primary),
-                Style::default().fg(p.muted),
-            )
+            (Style::default().fg(p.primary), Style::default().fg(p.muted))
         } else {
             (
                 Style::default().fg(p.foreground),
@@ -89,7 +86,12 @@ impl ListItem for DetailItem {
         buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
         let sep_x = area.x + self.title.len() as u16;
         buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
-        buf.set_string(sep_x + 3, area.y, &self.description, Style::default().fg(p.muted));
+        buf.set_string(
+            sep_x + 3,
+            area.y,
+            &self.description,
+            Style::default().fg(p.muted),
+        );
 
         // Line 2: category  ·  year  ·  origin
         if area.height > 1 {
@@ -136,10 +138,18 @@ impl ListItem for SeparatedDetailItem {
         buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
         let sep_x = area.x + self.title.len() as u16;
         buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
-        buf.set_string(sep_x + 3, area.y, &self.description, Style::default().fg(desc_fg));
+        buf.set_string(
+            sep_x + 3,
+            area.y,
+            &self.description,
+            Style::default().fg(desc_fg),
+        );
 
         // Right side: category · designation · distance
-        let right = format!("{} · {} · {}", self.category, self.designation, self.distance);
+        let right = format!(
+            "{} · {} · {}",
+            self.category, self.designation, self.distance
+        );
         let right_x = (area.x + area.width).saturating_sub(right.len() as u16);
         buf.set_string(right_x, area.y, &right, Style::default().fg(meta_fg));
 
@@ -188,10 +198,18 @@ impl ListItem for DenseItem {
         buf.set_string(area.x, area.y, &self.title, Style::default().fg(title_fg));
         let sep_x = area.x + self.title.len() as u16;
         buf.set_string(sep_x, area.y, " · ", Style::default().fg(p.faint));
-        buf.set_string(sep_x + 3, area.y, &self.description, Style::default().fg(desc_fg));
+        buf.set_string(
+            sep_x + 3,
+            area.y,
+            &self.description,
+            Style::default().fg(desc_fg),
+        );
 
         // Right: category · designation · distance
-        let right = format!("{} · {} · {}", self.category, self.designation, self.distance);
+        let right = format!(
+            "{} · {} · {}",
+            self.category, self.designation, self.distance
+        );
         let right_x = (area.x + area.width).saturating_sub(right.len() as u16);
         buf.set_string(right_x, area.y, &right, Style::default().fg(meta_fg));
     }
@@ -226,7 +244,12 @@ impl ListHeader for StyledHeader {
         // Count
         if area.height > 2 {
             let count_text = format!("{} items", ctx.total_items);
-            buf.set_string(area.x + 2, area.y + 2, &count_text, Style::default().fg(p.muted));
+            buf.set_string(
+                area.x + 2,
+                area.y + 2,
+                &count_text,
+                Style::default().fg(p.muted),
+            );
         }
     }
 }
@@ -342,29 +365,95 @@ impl App {
             TwoLineItem::new("Pine64", "Open-source ARM single board computer"),
         ];
         let detail = vec![
-            DetailItem::new("Andromeda", "Nearest spiral galaxy, on collision course with the Milky Way", "Galaxy", "M31", "2.537 Mly"),
-            DetailItem::new("Crab Nebula", "Supernova remnant with a rapidly spinning pulsar at its core", "Nebula", "M1", "6,500 ly"),
-            DetailItem::new("Pillars of Creation", "Towering columns of gas and dust in the Eagle Nebula", "Nebula", "M16", "7,000 ly"),
-            DetailItem::new("Sagittarius A*", "Supermassive black hole at the center of our galaxy", "Black Hole", "Sgr A*", "26,000 ly"),
-            DetailItem::new("Europa", "Icy moon of Jupiter with a subsurface ocean twice Earth's volume", "Moon", "Jupiter II", "628.3 Mkm"),
-            DetailItem::new("Olympus Mons", "Largest volcano in the solar system, 2.5× Everest's height", "Volcano", "Mars", "225 Mkm"),
-            DetailItem::new("Titan", "Saturn's largest moon with dense atmosphere and methane lakes", "Moon", "Saturn VI", "1.2 Bkm"),
-            DetailItem::new("Whirlpool Galaxy", "Grand-design spiral interacting with a smaller companion", "Galaxy", "M51", "23 Mly"),
-            DetailItem::new("Io", "Most volcanically active body in the solar system", "Moon", "Jupiter I", "628.3 Mkm"),
-            DetailItem::new("Horsehead Nebula", "Dark nebula silhouetted against glowing hydrogen gas", "Nebula", "B33", "1,375 ly"),
-            DetailItem::new("Enceladus", "Tiny moon venting water ice geysers from its south pole", "Moon", "Saturn II", "1.27 Bkm"),
-            DetailItem::new("Sombrero Galaxy", "Bright nucleus with an unusually large central bulge and dust lane", "Galaxy", "M104", "31.1 Mly"),
+            DetailItem::new(
+                "Andromeda",
+                "Nearest spiral galaxy, on collision course with the Milky Way",
+                "Galaxy",
+                "M31",
+                "2.537 Mly",
+            ),
+            DetailItem::new(
+                "Crab Nebula",
+                "Supernova remnant with a rapidly spinning pulsar at its core",
+                "Nebula",
+                "M1",
+                "6,500 ly",
+            ),
+            DetailItem::new(
+                "Pillars of Creation",
+                "Towering columns of gas and dust in the Eagle Nebula",
+                "Nebula",
+                "M16",
+                "7,000 ly",
+            ),
+            DetailItem::new(
+                "Sagittarius A*",
+                "Supermassive black hole at the center of our galaxy",
+                "Black Hole",
+                "Sgr A*",
+                "26,000 ly",
+            ),
+            DetailItem::new(
+                "Europa",
+                "Icy moon of Jupiter with a subsurface ocean twice Earth's volume",
+                "Moon",
+                "Jupiter II",
+                "628.3 Mkm",
+            ),
+            DetailItem::new(
+                "Olympus Mons",
+                "Largest volcano in the solar system, 2.5× Everest's height",
+                "Volcano",
+                "Mars",
+                "225 Mkm",
+            ),
+            DetailItem::new(
+                "Titan",
+                "Saturn's largest moon with dense atmosphere and methane lakes",
+                "Moon",
+                "Saturn VI",
+                "1.2 Bkm",
+            ),
+            DetailItem::new(
+                "Whirlpool Galaxy",
+                "Grand-design spiral interacting with a smaller companion",
+                "Galaxy",
+                "M51",
+                "23 Mly",
+            ),
+            DetailItem::new(
+                "Io",
+                "Most volcanically active body in the solar system",
+                "Moon",
+                "Jupiter I",
+                "628.3 Mkm",
+            ),
+            DetailItem::new(
+                "Horsehead Nebula",
+                "Dark nebula silhouetted against glowing hydrogen gas",
+                "Nebula",
+                "B33",
+                "1,375 ly",
+            ),
+            DetailItem::new(
+                "Enceladus",
+                "Tiny moon venting water ice geysers from its south pole",
+                "Moon",
+                "Saturn II",
+                "1.27 Bkm",
+            ),
+            DetailItem::new(
+                "Sombrero Galaxy",
+                "Bright nucleus with an unusually large central bulge and dust lane",
+                "Galaxy",
+                "M104",
+                "31.1 Mly",
+            ),
         ];
         let separated: Vec<SeparatedDetailItem> = detail
             .iter()
             .map(|d| {
-                SeparatedDetailItem::new(
-                    &d.title,
-                    &d.description,
-                    &d.category,
-                    &d.year,
-                    &d.origin,
-                )
+                SeparatedDetailItem::new(&d.title, &d.description, &d.category, &d.year, &d.origin)
             })
             .collect();
         let dense: Vec<DenseItem> = detail
@@ -372,8 +461,20 @@ impl App {
             .map(|d| DenseItem::new(&d.title, &d.description, &d.category, &d.year, &d.origin))
             .collect();
         let simple: Vec<SimpleItem> = [
-            "Rust", "Go", "Python", "TypeScript", "Zig", "Elixir", "Haskell", "OCaml", "Swift",
-            "Kotlin", "Ruby", "C", "Lua", "Julia",
+            "Rust",
+            "Go",
+            "Python",
+            "TypeScript",
+            "Zig",
+            "Elixir",
+            "Haskell",
+            "OCaml",
+            "Swift",
+            "Kotlin",
+            "Ruby",
+            "C",
+            "Lua",
+            "Julia",
         ]
         .iter()
         .map(|s| SimpleItem::new(s))
