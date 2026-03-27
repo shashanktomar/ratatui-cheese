@@ -9,6 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+crossterm = { workspace = true }
 ratatui = { workspace = true }
 unicode-width = "0.2.2"
 
