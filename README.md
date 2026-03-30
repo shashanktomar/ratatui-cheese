@@ -21,7 +21,7 @@ ratatui-cheese = "0.5"
 
 Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line, Dot, MiniDot, Jump, Pulse, Points, Globe, Moon, Monkey, Meter, Hamburger, Ellipsis.
 
-<img width="800" src="./spinners.gif" alt="Spinners" />
+![Spinners](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/spinners.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#spinner)
 
@@ -29,7 +29,7 @@ Animated spinner with 12 preset types matching Charmbracelet's Bubbles — Line,
 
 Keyboard shortcut help view with short (single-line) and full (multi-column) modes, matching Charmbracelet's Bubbles help component.
 
-<img width="800" src="./help.gif" alt="Help" />
+![Help](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/help.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#help)
 
@@ -37,7 +37,7 @@ Keyboard shortcut help view with short (single-line) and full (multi-column) mod
 
 Expandable parent/child tree list with collapsible groups, right-aligned counts, text truncation, and palette-based theming.
 
-<img width="800" src="./tree.gif" alt="Tree" />
+![Tree](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/tree.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#tree)
 
@@ -45,7 +45,7 @@ Expandable parent/child tree list with collapsible groups, right-aligned counts,
 
 Page indicator with dot and arabic display modes. Tracks pagination state and provides slice helpers.
 
-<img width="800" src="./paginator.gif" alt="Paginator" />
+![Paginator](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/paginator.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#paginator)
 
@@ -53,7 +53,7 @@ Page indicator with dot and arabic display modes. Tracks pagination state and pr
 
 Paginated list with item delegation. Each item controls its own rendering via the `ListItem` trait. Supports custom headers, configurable selection indicators, and palette-based theming.
 
-<img width="800" src="./list.gif" alt="List" />
+![List](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/list.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#list)
 
@@ -61,7 +61,7 @@ Paginated list with item delegation. Each item controls its own rendering via th
 
 Container widget with decorated horizontal rule lines and optional titles. Supports multiple fill styles and independent top/bottom alignment.
 
-<img width="800" src="./fieldset.gif" alt="Fieldset" />
+![Fieldset](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/fieldset.gif)
 
 [Usage & docs](crates/ratatui-cheese/README.md#fieldset)
 
