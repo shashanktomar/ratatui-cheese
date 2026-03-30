@@ -8,6 +8,7 @@ use ratatui_cheese::help::{Binding, Help, HelpStyles};
 use ratatui_cheese::theme::Palette;
 
 use crate::widgets::Component;
+use crate::widgets::fieldset::FieldsetComponent;
 use crate::widgets::help::HelpComponent;
 use crate::widgets::list::ListComponent;
 use crate::widgets::paginator::PaginatorComponent;
@@ -31,6 +32,7 @@ impl App {
                 Box::new(TreeComponent::new()),
                 Box::new(PaginatorComponent::new()),
                 Box::new(ListComponent::new()),
+                Box::new(FieldsetComponent::new()),
             ],
             selected: 0,
             show_help: false,
