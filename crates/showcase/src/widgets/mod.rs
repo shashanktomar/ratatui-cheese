@@ -1,3 +1,4 @@
+pub mod fieldset;
 pub mod help;
 pub mod list;
 pub mod paginator;

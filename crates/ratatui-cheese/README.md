@@ -212,6 +212,40 @@ let mut state = ListState::new(items.len());
 cargo run --example list
 ```
 
+### Fieldset
+
+Container widget with decorated horizontal rule lines. Renders top and bottom lines with optional title text and a repeating fill character (slash, dash, dot, double, thick, star, or custom). Supports independent left/center/right alignment for top and bottom titles.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui::layout::Alignment;
+use ratatui_cheese::fieldset::{Fieldset, FieldsetFill, FieldsetStyles};
+use ratatui_cheese::theme::Palette;
+
+let fieldset = Fieldset::new()
+    .title("Section Title")
+    .title_bottom("End")
+    .top_alignment(Alignment::Left)
+    .bottom_alignment(Alignment::Center)
+    .fill(FieldsetFill::Slash)
+    .styles(FieldsetStyles::from_palette(&Palette::charm()));
+
+// Get the inner area for content:
+// let inner = fieldset.inner(area);
+// frame.render_widget(&fieldset, area);
+// render children into `inner`
+```
+
+</details>
+
+![Fieldset](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/fieldset.gif)
+
+```sh
+cargo run --example fieldset
+```
+
 ## License
 
 MIT

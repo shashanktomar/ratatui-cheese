@@ -57,6 +57,14 @@ Paginated list with item delegation. Each item controls its own rendering via th
 
 [Usage & docs](crates/ratatui-cheese/README.md#list)
 
+### Fieldset
+
+Container widget with decorated horizontal rule lines and optional titles. Supports multiple fill styles and independent top/bottom alignment.
+
+![Fieldset](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/fieldset.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#fieldset)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
