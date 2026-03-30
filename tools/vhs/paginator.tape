@@ -1,8 +1,8 @@
 Output paginator.gif
 Set Theme "Catppuccin Mocha"
 Set FontSize 32
-Set Width 900
-Set Height 550
+Set Width 2400
+Set Height 1100
 Set Framerate 30
 Set Padding 20
 Hide

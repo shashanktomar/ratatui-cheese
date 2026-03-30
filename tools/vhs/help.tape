@@ -1,8 +1,8 @@
 Output help.gif
 Set Theme "Catppuccin Mocha"
 Set FontSize 32
-Set Width 1200
-Set Height 350
+Set Width 2400
+Set Height 700
 Set Framerate 30
 Set Padding 20
 Hide
