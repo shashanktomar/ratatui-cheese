@@ -22,3 +22,8 @@ references:
       url: git@github.com:charmbracelet/lipgloss.git
       branch: master
       description: "Charm Lip Gloss - Style definitions for terminal layouts"
+
+    - name: huh
+      url: git@github.com:charmbracelet/huh.git
+      branch: main
+      description: "Charm Huh - Interactive forms and prompts for terminal apps"
