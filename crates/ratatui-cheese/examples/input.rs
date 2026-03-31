@@ -20,11 +20,15 @@ use ratatui_cheese::theme::Palette;
 struct Variant {
     name: &'static str,
     setup: fn(&Palette) -> (Input<'static>, InputState),
+    char_limit: Option<usize>,
+    live_validate: bool,
 }
 
 const VARIANTS: &[Variant] = &[
     Variant {
         name: "Basic",
+        char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("What's your name?")
                 .description("For when your order is ready.")
@@ -38,6 +42,8 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "No description",
+        char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Email")
                 .placeholder("you@example.com")
@@ -56,6 +62,8 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Custom prompt",
+        char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Search")
                 .description("Find anything.")
@@ -68,6 +76,8 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Password mode",
+        char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Password")
                 .description("Keep it secret.")
@@ -82,6 +92,8 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "With value",
+        char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Package")
                 .description("Already filled in.")
@@ -96,6 +108,8 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Validation",
+        char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Email")
                 .description("We'll never share your email.")
@@ -117,7 +131,32 @@ const VARIANTS: &[Variant] = &[
         },
     },
     Variant {
+        name: "Live validation",
+        char_limit: None,
+        live_validate: true,
+        setup: |p| {
+            let input = Input::new("ISBN")
+                .description("Validates on every keystroke.")
+                .placeholder("978...")
+                .palette(p);
+            let state = InputState::new().validator(|v| {
+                if v.is_empty() {
+                    Err("Enter an ISBN".into())
+                } else if v.len() < 13 {
+                    Err(format!("{} digits, need 13", v.len()))
+                } else if v.len() > 13 {
+                    Err("Too many digits".into())
+                } else {
+                    Ok(Some("Valid ISBN".into()))
+                }
+            });
+            (input, state)
+        },
+    },
+    Variant {
         name: "Char limit (5)",
+        char_limit: Some(5),
+        live_validate: false,
         setup: |p| {
             let input = Input::new("PIN")
                 .description("Enter your 5-digit PIN.")
@@ -136,7 +175,6 @@ struct Model {
     paginator_state: PaginatorState,
     input: Input<'static>,
     input_state: InputState,
-    char_limit: Option<usize>,
     palette: Palette,
 }
 
@@ -150,9 +188,12 @@ impl Model {
             paginator_state: PaginatorState::new(VARIANTS.len(), 1),
             input,
             input_state,
-            char_limit: None,
             palette,
         }
+    }
+
+    fn variant(&self) -> &Variant {
+        &VARIANTS[self.variant_index]
     }
 
     fn switch_to(&mut self, index: usize) {
@@ -161,7 +202,6 @@ impl Model {
         input_state.set_focused(true);
         self.input = input;
         self.input_state = input_state;
-        self.char_limit = if VARIANTS[index].name == "Char limit (5)" { Some(5) } else { None };
         self.paginator_state = PaginatorState::new(VARIANTS.len(), 1);
         for _ in 0..index {
             self.paginator_state.next_page();
@@ -205,10 +245,23 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
                 KeyCode::Enter => {
                     m.input_state.validate();
                 }
-                KeyCode::Backspace => m.input_state.delete_before(),
-                KeyCode::Delete => m.input_state.delete_at(),
+                KeyCode::Backspace => {
+                    m.input_state.delete_before();
+                    if m.variant().live_validate {
+                        m.input_state.validate();
+                    }
+                }
+                KeyCode::Delete => {
+                    m.input_state.delete_at();
+                    if m.variant().live_validate {
+                        m.input_state.validate();
+                    }
+                }
                 KeyCode::Char(c) => {
-                    m.input_state.insert_char_limited(c, m.char_limit);
+                    m.input_state.insert_char_limited(c, m.variant().char_limit);
+                    if m.variant().live_validate {
+                        m.input_state.validate();
+                    }
                 }
                 _ => {}
             }

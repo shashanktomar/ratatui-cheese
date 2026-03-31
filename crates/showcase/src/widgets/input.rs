@@ -14,12 +14,14 @@ struct Variant {
     name: &'static str,
     setup: fn(&Palette) -> (Input<'static>, InputState),
     char_limit: Option<usize>,
+    live_validate: bool,
 }
 
 const VARIANTS: &[Variant] = &[
     Variant {
         name: "Basic",
         char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("What's your name?")
                 .description("For when your order is ready.")
@@ -34,6 +36,7 @@ const VARIANTS: &[Variant] = &[
     Variant {
         name: "No description",
         char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Email")
                 .placeholder("you@example.com")
@@ -53,6 +56,7 @@ const VARIANTS: &[Variant] = &[
     Variant {
         name: "Custom prompt",
         char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Search")
                 .description("Find anything.")
@@ -66,6 +70,7 @@ const VARIANTS: &[Variant] = &[
     Variant {
         name: "Password mode",
         char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Password")
                 .description("Keep it secret.")
@@ -81,6 +86,7 @@ const VARIANTS: &[Variant] = &[
     Variant {
         name: "With value",
         char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Package")
                 .description("Already filled in.")
@@ -96,6 +102,7 @@ const VARIANTS: &[Variant] = &[
     Variant {
         name: "Validation",
         char_limit: None,
+        live_validate: false,
         setup: |p| {
             let input = Input::new("Email")
                 .description("We'll never share your email.")
@@ -117,8 +124,32 @@ const VARIANTS: &[Variant] = &[
         },
     },
     Variant {
+        name: "Live validation",
+        char_limit: None,
+        live_validate: true,
+        setup: |p| {
+            let input = Input::new("ISBN")
+                .description("Validates on every keystroke.")
+                .placeholder("978...")
+                .palette(p);
+            let state = InputState::new().validator(|v| {
+                if v.is_empty() {
+                    Err("Enter an ISBN".into())
+                } else if v.len() < 13 {
+                    Err(format!("{} digits, need 13", v.len()))
+                } else if v.len() > 13 {
+                    Err("Too many digits".into())
+                } else {
+                    Ok(Some("Valid ISBN".into()))
+                }
+            });
+            (input, state)
+        },
+    },
+    Variant {
         name: "Char limit (5)",
         char_limit: Some(5),
+        live_validate: false,
         setup: |p| {
             let input = Input::new("PIN")
                 .description("Enter your 5-digit PIN.")
@@ -137,7 +168,6 @@ pub struct InputComponent {
     paginator_state: PaginatorState,
     input: Input<'static>,
     input_state: InputState,
-    char_limit: Option<usize>,
     last_palette: Palette,
 }
 
@@ -151,9 +181,12 @@ impl InputComponent {
             paginator_state: PaginatorState::new(VARIANTS.len(), 1),
             input,
             input_state,
-            char_limit: VARIANTS[0].char_limit,
             last_palette: palette,
         }
+    }
+
+    fn variant(&self) -> &Variant {
+        &VARIANTS[self.variant_index]
     }
 
     fn switch_to(&mut self, index: usize, palette: &Palette) {
@@ -162,7 +195,6 @@ impl InputComponent {
         input_state.set_focused(true);
         self.input = input;
         self.input_state = input_state;
-        self.char_limit = VARIANTS[index].char_limit;
         self.paginator_state = PaginatorState::new(VARIANTS.len(), 1);
         for _ in 0..index {
             self.paginator_state.next_page();
@@ -195,10 +227,24 @@ impl Component for InputComponent {
             KeyCode::Enter => {
                 self.input_state.validate();
             }
-            KeyCode::Backspace => self.input_state.delete_before(),
-            KeyCode::Delete => self.input_state.delete_at(),
+            KeyCode::Backspace => {
+                self.input_state.delete_before();
+                if self.variant().live_validate {
+                    self.input_state.validate();
+                }
+            }
+            KeyCode::Delete => {
+                self.input_state.delete_at();
+                if self.variant().live_validate {
+                    self.input_state.validate();
+                }
+            }
             KeyCode::Char(c) => {
-                self.input_state.insert_char_limited(c, self.char_limit);
+                self.input_state
+                    .insert_char_limited(c, self.variant().char_limit);
+                if self.variant().live_validate {
+                    self.input_state.validate();
+                }
             }
             _ => {}
         }
