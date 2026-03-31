@@ -9,6 +9,7 @@ pub mod help;
 pub mod input;
 pub mod list;
 pub mod paginator;
+pub mod select;
 pub mod spinner;
 pub mod theme;
 pub mod tree;

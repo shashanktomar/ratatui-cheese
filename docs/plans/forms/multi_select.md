@@ -4,6 +4,18 @@
 
 Multiple selection widget inspired by huh's MultiSelect field. User toggles options on/off from a vertical list.
 
+## Lessons from Input + Select
+
+- `ValidationResult` lives in `field.rs` — import from there
+- Use `error`/`success` from Palette, `faint` for disabled
+- Content-only test helper with `unicode_width` for display width
+- Options store `enabled: bool` — disabled options rendered faint, skipped by navigation
+- `next()`/`prev()` take `&[Option]` not `usize` — needed for skipping disabled
+- Example/showcase `VariantData` stores `Vec<MultiSelectOption>` directly (not `Vec<&str>`)
+- Clone options before mutable state access to avoid borrow conflicts
+- `live_validate` flag on variants for validation-on-change behavior
+- Example uses `h`/`l` for variant cycling, showcase too (detail panel captures all keys)
+
 ## Layout
 
 ```
@@ -13,7 +25,7 @@ Choose up to 4.                 <- description: muted (optional)
   > ✓ Lettuce                   <- cursor + checked: primary
     ✓ Tomatoes                  <- checked (no cursor): primary
     • Charm Sauce               <- unchecked: muted
-    • Jalapeños
+    • Jalapeños                 <- disabled: faint (if disabled)
     • Cheese
     • Vegan Cheese
     • Nutella
@@ -36,14 +48,21 @@ Choose up to 4.                 <- description: muted (optional)
 ## Structures
 
 ### `MultiSelectOption<'a>`
-Same as `SelectOption<'a>` — `label` + optional `description`. Reuse the same type from a shared location, or define identically. Consider putting `SelectOption` in `field.rs` and reusing it as the option type for both widgets.
+```rust
+pub struct MultiSelectOption<'a> {
+    pub label: &'a str,
+    pub enabled: bool,
+}
+```
+- `new(label)` constructor, `.enabled(false)` builder
+- `From<&str>` for convenience (enabled by default)
 
 ### `MultiSelectStyles`
-- `title`, `description` — same as Input
-- `option` — unselected option text (foreground)
+- `title`, `description` — same as Input/Select
 - `cursor` — cursor indicator (primary)
-- `checked` — checked indicator + text (primary)
-- `unchecked` — unchecked indicator (muted)
+- `checked` — checked indicator + label (primary)
+- `unchecked` — unchecked indicator + label (foreground)
+- `disabled` — disabled option (faint)
 - `validation_error` — from `p.error`
 - `validation_success` — from `p.success`
 - `from_palette(&Palette)` derives all
@@ -59,20 +78,21 @@ Builder with:
 - `unchecked_indicator: &'a str` (default: "•")
 - `styles: MultiSelectStyles`
 
-Builder methods: `.description()`, `.options()`, `.limit()`, `.cursor_indicator()`, `.checked_indicator()`, `.unchecked_indicator()`, `.styles()`, `.palette()`
-
 ### `MultiSelectState`
-- `cursor: usize` — currently highlighted index
-- `selected: Vec<bool>` — one per option
+Constructor: `new(count: usize)` — initializes `selected: Vec<bool>` with `count` false values.
+
+Fields:
+- `cursor: usize`
+- `selected: Vec<bool>`
 - `focused: bool`
 - `validation_message: Option<(ValidationKind, String)>`
-- `validator: Option<Box<dyn Fn(&[bool]) -> ValidationResult>>` — validates selection state
+- `validator: Option<Box<dyn Fn(&[bool]) -> ValidationResult>>`
 
 State methods:
-- `next()` — move cursor down (wrap)
-- `prev()` — move cursor up (wrap)
-- `toggle_current()` — toggle selection at cursor (respects limit)
-- `select_all()` — select all (respects limit)
+- `next(&[MultiSelectOption])` — move cursor down, skip disabled (wrap)
+- `prev(&[MultiSelectOption])` — move cursor up, skip disabled (wrap)
+- `toggle_current()` — toggle at cursor (respects limit — only toggle on if under limit)
+- `select_all(limit)` — select all enabled (up to limit)
 - `deselect_all()` — deselect all
 - `cursor() -> usize`
 - `is_selected(index) -> bool`
@@ -83,43 +103,38 @@ State methods:
 - `set_validation()`, `validation()`
 - `.validator()` — builder method
 
-Constructor: `MultiSelectState::new(count: usize)` — initializes `selected` vec with `count` false values.
-
 ### Rendering
 
 1. Title line
 2. Description line (if set)
 3. Options list — each on its own line:
-   - `> ✓ Label` — cursor + checked (cursor style + checked style)
-   - `  ✓ Label` — no cursor, checked (checked style)
-   - `> • Label` — cursor + unchecked (cursor style + unchecked style)
-   - `  • Label` — no cursor, unchecked (unchecked style)
-   - Indent: cursor_indicator width + space + indicator + space + label
+   - Disabled: `  label` in faint style (no indicator)
+   - Cursor + checked: `> ✓ Label` (cursor style + checked style)
+   - Cursor + unchecked: `> • Label` (cursor style + unchecked style)
+   - Checked: `  ✓ Label` (checked style)
+   - Unchecked: `  • Label` (unchecked style)
+   - Indent: cursor_width + space + indicator_width + space + label
 4. Validation message line
 
-No scrolling for v1 — same as Select.
-
 ### Widget impls
-Same 4-impl pattern.
+Same 4-impl pattern as Select.
 
-## Example Variants
+## Example Variants (astrophysics theme)
 
 | Name | Description |
 |------|-------------|
-| Basic | Toppings list, unlimited selections |
-| With limit | "Choose up to 3", limit enforced |
-| Pre-selected | Some options pre-checked |
-| Custom indicators | Uses "x" / "○" instead of "✓" / "•" |
-| Validation | Validator requiring at least 1 selection, starts empty |
+| Basic | Planetary instruments, unlimited |
+| With limit | "Choose up to 3 experiments", limit enforced |
+| Pre-selected | Some instruments pre-checked |
+| Disabled options | Some instruments unavailable |
+| Validation | Validator requiring at least 1, live validate on toggle |
 
 ## Showcase
 
-Add `MultiSelectComponent` with cycling variants. `j`/`k` navigate, `space` toggles, `←/→` switch variants.
+Same cycling variant pattern. `j`/`k` navigate, `space` toggles, `h`/`l` cycle variants, `enter` validates.
 
 ## Verification
 
-1. `just check`
-2. `just lint`
-3. `just test`
-4. `just example multi_select`
-5. `just showcase`
+1. `just all`
+2. `just example multi_select`
+3. `just showcase`

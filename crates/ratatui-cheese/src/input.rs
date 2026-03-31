@@ -18,7 +18,7 @@
 //! assert_eq!(state.value(), "Hi");
 //! ```
 
-use crate::field::ValidationKind;
+use crate::field::{ValidationKind, ValidationResult};
 use crate::theme::Palette;
 use crate::utils::display_width;
 use ratatui::buffer::Buffer;
@@ -225,13 +225,6 @@ pub struct InputState {
     validation_message: Option<(ValidationKind, String)>,
     validator: Option<ValidatorFn>,
 }
-
-/// The result type returned by a validator function.
-///
-/// - `Ok(None)` — valid, no message shown
-/// - `Ok(Some("msg"))` — valid, show success message
-/// - `Err("msg")` — invalid, show error message
-pub type ValidationResult = Result<Option<String>, String>;
 
 type ValidatorFn = Box<dyn Fn(&str) -> ValidationResult>;
 

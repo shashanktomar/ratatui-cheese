@@ -13,6 +13,7 @@ use crate::widgets::help::HelpComponent;
 use crate::widgets::input::InputComponent;
 use crate::widgets::list::ListComponent;
 use crate::widgets::paginator::PaginatorComponent;
+use crate::widgets::select::SelectComponent;
 use crate::widgets::spinner::SpinnerComponent;
 use crate::widgets::tree::TreeComponent;
 
@@ -43,6 +44,7 @@ impl App {
                 Box::new(ListComponent::new()),
                 Box::new(FieldsetComponent::new()),
                 Box::new(InputComponent::new()),
+                Box::new(SelectComponent::new()),
             ],
             selected: 0,
             focus: Focus::Sidebar,
