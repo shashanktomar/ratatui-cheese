@@ -12,6 +12,7 @@ use crate::widgets::fieldset::FieldsetComponent;
 use crate::widgets::help::HelpComponent;
 use crate::widgets::input::InputComponent;
 use crate::widgets::list::ListComponent;
+use crate::widgets::multi_select::MultiSelectComponent;
 use crate::widgets::paginator::PaginatorComponent;
 use crate::widgets::select::SelectComponent;
 use crate::widgets::spinner::SpinnerComponent;
@@ -45,6 +46,7 @@ impl App {
                 Box::new(FieldsetComponent::new()),
                 Box::new(InputComponent::new()),
                 Box::new(SelectComponent::new()),
+                Box::new(MultiSelectComponent::new()),
             ],
             selected: 0,
             focus: Focus::Sidebar,

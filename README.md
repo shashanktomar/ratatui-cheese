@@ -65,6 +65,14 @@ Container widget with decorated horizontal rule lines and optional titles. Suppo
 
 [Usage & docs](crates/ratatui-cheese/README.md#fieldset)
 
+### Multi Select
+
+Multiple-selection widget for toggling options on/off from a vertical list. Supports selection limits, disabled options, and validation.
+
+![Multi Select](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/multi_select.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#multi-select)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
