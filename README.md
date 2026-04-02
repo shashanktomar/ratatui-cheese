@@ -65,6 +65,14 @@ Container widget with decorated horizontal rule lines and optional titles. Suppo
 
 [Usage & docs](crates/ratatui-cheese/README.md#fieldset)
 
+### Input
+
+Single-line text input with placeholder, password mode, character limit, custom prompt, and validation.
+
+![Input](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/input.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#input)
+
 ## Examples
 
 Run the showcase to see all widgets in action:

@@ -1,13 +1,13 @@
 ---
 name: ratatui-cheese-review
-description: 'Review the ratatui-cheese repository from three distinct perspectives: correctness, Rust best practices, and API design. Use this skill when the user asks for a repo review, design review, code audit, API critique, or requests written review output for this project. Trigger even when the user only mentions reviewing "this repo", "the codebase", "the library API", or asks for findings to be written into files.'
+description: 'Review the ratatui-cheese repository from four distinct perspectives: correctness, Rust best practices, API design, and code repetition/refactoring. Use this skill when the user asks for a repo review, design review, code audit, API critique, refactoring suggestions, or requests written review output for this project. Trigger even when the user only mentions reviewing "this repo", "the codebase", "the library API", or asks for findings to be written into files.'
 ---
 
 # Ratatui Cheese Review
 
 ## Overview
 
-Review the full ratatui-cheese repository and write findings into a `review/` directory with one file per review angle. Treat this as a code review task: findings first, ordered by severity, with file/line references and concrete impact.
+Review the full ratatui-cheese repository and write findings into a `review/` directory with one file per review angle. Treat this as a code review task: findings first, ordered by severity, with file/line references and concrete impact. Four perspectives: correctness, Rust best practices, API design, and code repetition/refactoring opportunities.
 
 ## Scope
 
@@ -30,7 +30,7 @@ Do not review only the diff unless the user explicitly narrows scope.
 
 ### 2. Review from three separate angles
 
-Keep the perspectives separate. A single issue can appear in more than one perspective only if the reasoning is genuinely different.
+Keep the perspectives separate. A single issue can appear in more than one perspective only if the reasoning is genuinely different. Review all four angles.
 
 #### Correctness
 
@@ -70,6 +70,20 @@ Focus on the public crate surface:
 
 This file should answer: "Is this a good library API for users to depend on?"
 
+#### Code Repetition & Refactoring
+
+Focus on:
+
+- Duplicated logic across modules (e.g., repeated rendering patterns, shared state management boilerplate)
+- Near-identical code blocks that differ only in minor details and could be unified via generics, traits, macros, or shared helpers
+- Patterns that are copy-pasted across widgets instead of being extracted into common utilities
+- Opportunities to reduce boilerplate through derive macros, blanket impls, or default trait methods
+- Structural similarities between modules that suggest a missing abstraction
+- Test code duplication where shared test helpers or fixtures would reduce maintenance burden
+- Configuration or builder patterns that repeat across types and could share a common base
+
+This file should answer: "Where is the codebase doing the same thing twice, and what abstractions would reduce that without adding unnecessary complexity?"
+
 ### 3. Write the review output
 
 Create `review/` at the repo root and write exactly these files:
@@ -77,6 +91,7 @@ Create `review/` at the repo root and write exactly these files:
 - `review/correctness.md`
 - `review/rust-best-practices.md`
 - `review/api-design.md`
+- `review/code-repetition.md`
 
 Each file should:
 

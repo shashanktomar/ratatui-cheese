@@ -624,8 +624,8 @@ impl Component for ListComponent {
         let count = self.item_count();
         match key {
             KeyCode::Char('c') => self.next_demo(),
-            KeyCode::Char('n') => self.state_mut().select_next(count, false),
-            KeyCode::Char('N') => self.state_mut().select_prev(count, false),
+            KeyCode::Char('j') | KeyCode::Down => self.state_mut().select_next(count, false),
+            KeyCode::Char('k') | KeyCode::Up => self.state_mut().select_prev(count, false),
             KeyCode::Char('l') | KeyCode::Right => self.state_mut().next_page(count),
             KeyCode::Char('h') | KeyCode::Left => self.state_mut().prev_page(count),
             KeyCode::Char('f') => self.toggle_favorite(),
@@ -635,10 +635,16 @@ impl Component for ListComponent {
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect) {
+    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool) {
         let example_name = EXAMPLE_NAMES[self.current];
+        let border_style = if focused {
+            Style::default().fg(palette.foreground)
+        } else {
+            Style::default().fg(palette.faint)
+        };
         let block = Block::bordered()
             .title(format!(" List: {example_name} "))
+            .border_style(border_style)
             .padding(Padding::new(2, 2, 1, 0));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -715,7 +721,7 @@ impl Component for ListComponent {
         // Help
         if let Some(help_area) = help_area {
             let help = Line::from(Span::styled(
-                "n/N: select • g/G: top/bottom • h/l: page • f: fav • c: cycle",
+                "j/k: select • g/G: top/bottom • h/l: page • c: cycle",
                 Style::default().fg(palette.faint),
             ));
             help.render(help_area, frame.buffer_mut());

@@ -49,14 +49,20 @@ impl Component for PaginatorComponent {
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect) {
+    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool) {
         let mode_label = match self.mode {
             PaginatorMode::Dots => "Dots",
             PaginatorMode::Arabic => "Arabic",
         };
 
+        let border_style = if focused {
+            Style::default().fg(palette.foreground)
+        } else {
+            Style::default().fg(palette.faint)
+        };
         let block = Block::bordered()
             .title(format!(" Paginator: {mode_label} "))
+            .border_style(border_style)
             .padding(Padding::new(2, 2, 1, 1));
         let inner = block.inner(area);
         frame.render_widget(block, area);

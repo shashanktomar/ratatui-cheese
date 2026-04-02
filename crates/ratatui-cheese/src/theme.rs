@@ -40,6 +40,8 @@ use ratatui::style::Color;
 /// | `border`    | Borders, dividers                                |
 /// | `highlight` | Bold background (title bars, badges)             |
 /// | `on_highlight`| Text on `highlight` background                 |
+/// | `error`       | Error, failure, destructive actions               |
+/// | `success`     | Success, confirmation, positive outcomes          |
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Palette {
     /// Primary text color.
@@ -60,6 +62,10 @@ pub struct Palette {
     pub highlight: Color,
     /// Text color for content on `highlight` background.
     pub on_highlight: Color,
+    /// Error, failure, destructive actions.
+    pub error: Color,
+    /// Success, confirmation, positive outcomes.
+    pub success: Color,
 }
 
 impl Default for Palette {
@@ -82,6 +88,8 @@ impl Palette {
             border: Color::Indexed(238),
             highlight: Color::Indexed(141),
             on_highlight: Color::Indexed(235),
+            error: Color::Indexed(203),
+            success: Color::Indexed(114),
         }
     }
 
@@ -98,6 +106,8 @@ impl Palette {
             border: Color::Indexed(250),
             highlight: Color::Indexed(97),
             on_highlight: Color::Indexed(255),
+            error: Color::Indexed(160),
+            success: Color::Indexed(28),
         }
     }
 
@@ -116,6 +126,8 @@ impl Palette {
             border: Color::Indexed(238),
             highlight: Color::Rgb(0x7D, 0x56, 0xF4),
             on_highlight: Color::Rgb(0xFA, 0xFA, 0xFA),
+            error: Color::Rgb(0xFF, 0x55, 0x55),
+            success: Color::Rgb(0x3D, 0xD6, 0x8C),
         }
     }
 
@@ -132,6 +144,8 @@ impl Palette {
             border: Color::Indexed(238),
             highlight: Color::Rgb(0x5F, 0xAF, 0xFF),
             on_highlight: Color::Indexed(235),
+            error: Color::Rgb(0xFF, 0x6B, 0x6B),
+            success: Color::Rgb(0x00, 0xD7, 0x87),
         }
     }
 
@@ -148,6 +162,8 @@ impl Palette {
             border: Color::Indexed(239),
             highlight: Color::Rgb(0xFF, 0x87, 0x5F),
             on_highlight: Color::Indexed(235),
+            error: Color::Rgb(0xFF, 0x5F, 0x5F),
+            success: Color::Rgb(0x87, 0xD7, 0x5F),
         }
     }
 
