@@ -669,8 +669,8 @@ fn draw(frame: &mut Frame, app: &mut App) {
 
     let example_name = EXAMPLE_NAMES[app.current];
 
-    // Cap the list to roughly half the terminal so pagination is always visible
-    let max_list_height = content_area.height / 2;
+    // Cap the list so pagination is always visible
+    let max_list_height = content_area.height * 4 / 5;
 
     let [title_area, _, list_area, _, help_area] = Layout::vertical([
         Constraint::Length(1),
