@@ -2,6 +2,7 @@ pub mod fieldset;
 pub mod help;
 pub mod list;
 pub mod paginator;
+pub mod palette;
 pub mod spinner;
 pub mod tree;
 

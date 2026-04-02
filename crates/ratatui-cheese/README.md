@@ -246,6 +246,18 @@ let fieldset = Fieldset::new()
 cargo run --example fieldset
 ```
 
+### Palette
+
+Semantic color palette with 5 built-in presets (Dark, Light, Charm, Ocean, Sunset). All widgets derive their styles from a shared `Palette` via `from_palette()`.
+
+![Palette](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/palette.png)
+
+See it in action:
+
+```sh
+cargo run --example palette
+```
+
 ## License
 
 MIT

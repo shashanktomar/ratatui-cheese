@@ -65,6 +65,14 @@ Container widget with decorated horizontal rule lines and optional titles. Suppo
 
 [Usage & docs](crates/ratatui-cheese/README.md#fieldset)
 
+### Palette
+
+Semantic color palette with 5 built-in presets. All widgets derive their styles from a shared `Palette`.
+
+![Palette](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/palette.png)
+
+[Usage & docs](crates/ratatui-cheese/README.md#palette)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
