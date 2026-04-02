@@ -12,7 +12,7 @@
 //! let select = Select::new("Pick a fruit", &options);
 //!
 //! let mut state = SelectState::new(options.len());
-//! state.next();
+//! state.next(&options);
 //! assert_eq!(state.selected(), 1);
 //! ```
 

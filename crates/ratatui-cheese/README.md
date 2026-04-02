@@ -246,6 +246,42 @@ let fieldset = Fieldset::new()
 cargo run --example fieldset
 ```
 
+### Select
+
+Single-selection widget for picking one option from a vertical list. Supports disabled options, custom cursor indicator, and validation. Inspired by Charmbracelet's huh select field.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui_cheese::select::{Select, SelectOption, SelectState};
+use ratatui_cheese::theme::Palette;
+
+let options: Vec<SelectOption> = vec!["Mars".into(), "Europa".into(), "Titan".into()];
+let select = Select::new("Destination", &options)
+    .description("Where would you like to go?")
+    .palette(&Palette::charm());
+
+let mut state = SelectState::new(options.len());
+
+// Navigation:
+// state.next(&options);   // move cursor down
+// state.prev(&options);   // move cursor up
+
+// In your draw function:
+// frame.render_stateful_widget(&select, area, &mut state);
+```
+
+</details>
+
+![Select](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/select.gif)
+
+See it in action:
+
+```sh
+cargo run --example select
+```
+
 ## License
 
 MIT

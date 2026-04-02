@@ -65,6 +65,14 @@ Container widget with decorated horizontal rule lines and optional titles. Suppo
 
 [Usage & docs](crates/ratatui-cheese/README.md#fieldset)
 
+### Select
+
+Single-selection widget for picking one option from a vertical list. Supports disabled options, custom cursor, and validation.
+
+![Select](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/select.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#select)
+
 ## Examples
 
 Run the showcase to see all widgets in action:
