@@ -3,10 +3,14 @@
 //! Bringing the ergonomics of [Charm's Bubbles](https://github.com/charmbracelet/bubbles)
 //! to the Rust TUI ecosystem.
 
+pub mod field;
 pub mod fieldset;
 pub mod help;
+pub mod input;
 pub mod list;
+pub mod multi_select;
 pub mod paginator;
+pub mod select;
 pub mod spinner;
 pub mod theme;
 pub mod tree;

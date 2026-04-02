@@ -79,11 +79,17 @@ impl Component for SpinnerComponent {
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect) {
+    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool) {
         let entry = &mut self.entries[self.index];
 
+        let border_style = if focused {
+            Style::default().fg(palette.foreground)
+        } else {
+            Style::default().fg(palette.faint)
+        };
         let block = Block::bordered()
             .title(format!(" Spinner: {} ", entry.name))
+            .border_style(border_style)
             .padding(Padding::new(2, 2, 1, 1));
         let inner = block.inner(area);
         frame.render_widget(block, area);
