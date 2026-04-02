@@ -12,6 +12,7 @@ use crate::widgets::fieldset::FieldsetComponent;
 use crate::widgets::help::HelpComponent;
 use crate::widgets::list::ListComponent;
 use crate::widgets::paginator::PaginatorComponent;
+use crate::widgets::palette::PaletteComponent;
 use crate::widgets::spinner::SpinnerComponent;
 use crate::widgets::tree::TreeComponent;
 
@@ -33,6 +34,7 @@ impl App {
                 Box::new(PaginatorComponent::new()),
                 Box::new(ListComponent::new()),
                 Box::new(FieldsetComponent::new()),
+                Box::new(PaletteComponent::new()),
             ],
             selected: 0,
             show_help: false,
