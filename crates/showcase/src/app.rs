@@ -74,8 +74,8 @@ impl App {
             return false;
         }
 
-        // Esc: quit from sidebar, return to sidebar from detail
-        if key == KeyCode::Esc {
+        // Esc/q: quit from sidebar, return to sidebar from detail
+        if key == KeyCode::Esc || (key == KeyCode::Char('q') && self.focus == Focus::Sidebar) {
             return match self.focus {
                 Focus::Sidebar => true,
                 Focus::Detail => {
@@ -94,9 +94,6 @@ impl App {
 
     fn handle_sidebar_key(&mut self, key: KeyCode) {
         match key {
-            KeyCode::Char('q') => {
-                // handled via Esc path, but also allow q to quit from sidebar
-            }
             KeyCode::Char('p') => self.next_palette(),
             KeyCode::Char('P') => self.prev_palette(),
             KeyCode::Down | KeyCode::Char('j') => self.select_next(),
