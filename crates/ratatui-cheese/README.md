@@ -246,6 +246,44 @@ let fieldset = Fieldset::new()
 cargo run --example fieldset
 ```
 
+### Input
+
+Single-line text input with placeholder, password mode, character limit, custom prompt, and validation. Inspired by Charmbracelet's huh input field.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui_cheese::input::{Input, InputState};
+use ratatui_cheese::theme::Palette;
+
+let input = Input::new("What's your name?")
+    .description("For when your order is ready.")
+    .placeholder("Enter name...")
+    .palette(&Palette::charm());
+
+let mut state = InputState::new();
+state.set_focused(true);
+
+// Text manipulation:
+// state.insert_char('H');
+// state.delete_before();  // backspace
+// state.move_left();      // cursor left
+
+// In your draw function:
+// frame.render_stateful_widget(&input, area, &mut state);
+```
+
+</details>
+
+![Input](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/input.gif)
+
+See it in action:
+
+```sh
+cargo run --example input
+```
+
 ### Select
 
 Single-selection widget for picking one option from a vertical list. Supports disabled options, custom cursor indicator, and validation. Inspired by Charmbracelet's huh select field.

@@ -116,7 +116,6 @@ pub struct Input<'a> {
     description: Option<&'a str>,
     placeholder: Option<&'a str>,
     prompt: &'a str,
-    char_limit: Option<usize>,
     password_mode: bool,
     password_char: char,
     styles: InputStyles,
@@ -131,7 +130,6 @@ impl<'a> Input<'a> {
             description: None,
             placeholder: None,
             prompt: ">",
-            char_limit: None,
             password_mode: false,
             password_char: '*',
             styles: InputStyles::default(),
@@ -156,13 +154,6 @@ impl<'a> Input<'a> {
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn prompt(mut self, prompt: &'a str) -> Self {
         self.prompt = prompt;
-        self
-    }
-
-    /// Sets the maximum number of characters allowed.
-    #[must_use = "method moves the value of self and returns the modified value"]
-    pub fn char_limit(mut self, limit: usize) -> Self {
-        self.char_limit = Some(limit);
         self
     }
 
@@ -222,6 +213,10 @@ pub struct InputState {
     value: String,
     cursor_pos: usize,
     focused: bool,
+    char_limit: Option<usize>,
+    /// First visible character index (used internally by the renderer for
+    /// viewport scrolling when text exceeds the available width).
+    scroll_offset: usize,
     validation_message: Option<(ValidationKind, String)>,
     validator: Option<ValidatorFn>,
 }
@@ -234,6 +229,8 @@ impl std::fmt::Debug for InputState {
             .field("value", &self.value)
             .field("cursor_pos", &self.cursor_pos)
             .field("focused", &self.focused)
+            .field("char_limit", &self.char_limit)
+            .field("scroll_offset", &self.scroll_offset)
             .field("validation_message", &self.validation_message)
             .field("validator", &self.validator.as_ref().map(|_| ".."))
             .finish()
@@ -253,9 +250,21 @@ impl InputState {
             value: String::new(),
             cursor_pos: 0,
             focused: false,
+            char_limit: None,
+            scroll_offset: 0,
             validation_message: None,
             validator: None,
         }
+    }
+
+    /// Sets the maximum number of characters allowed.
+    ///
+    /// When set, [`insert_char`](Self::insert_char) silently refuses characters
+    /// that would exceed the limit.
+    #[must_use = "method moves the value of self and returns the modified value"]
+    pub fn char_limit(mut self, limit: usize) -> Self {
+        self.char_limit = Some(limit);
+        self
     }
 
     /// Sets a validator function that runs on blur or when [`validate()`](Self::validate)
@@ -341,25 +350,17 @@ impl InputState {
 
     /// Inserts a character at the cursor position and advances the cursor.
     ///
-    /// Respects the char limit set on the [`Input`] widget. Pass the limit
-    /// from the widget, or `None` if unlimited.
+    /// If a [`char_limit`](Self::char_limit) is set, the character is silently
+    /// ignored when the limit has been reached.
     pub fn insert_char(&mut self, ch: char) {
+        if let Some(limit) = self.char_limit
+            && self.value.chars().count() >= limit
+        {
+            return;
+        }
         let byte_idx = self.byte_offset(self.cursor_pos);
         self.value.insert(byte_idx, ch);
         self.cursor_pos += 1;
-    }
-
-    /// Inserts a character at the cursor, respecting a char limit.
-    ///
-    /// Returns `false` if the limit was reached and the char was not inserted.
-    pub fn insert_char_limited(&mut self, ch: char, limit: Option<usize>) -> bool {
-        if let Some(limit) = limit
-            && self.value.chars().count() >= limit
-        {
-            return false;
-        }
-        self.insert_char(ch);
-        true
     }
 
     /// Deletes the character before the cursor (backspace).
@@ -492,31 +493,57 @@ impl StatefulWidget for &Input<'_> {
                 if state.focused && text_x < area.right() {
                     buf[ratatui::layout::Position::new(text_x, y)].set_style(styles.cursor);
                 }
+                state.scroll_offset = 0;
             } else {
-                // Render text (or masked text)
-                let display_text: String = if self.password_mode {
-                    std::iter::repeat_n(self.password_char, state.value.chars().count()).collect()
-                } else {
-                    state.value.clone()
+                let mask_width = UnicodeWidthChar::width(self.password_char).unwrap_or(1);
+
+                let char_width = |ch: char| -> usize {
+                    if self.password_mode {
+                        mask_width
+                    } else {
+                        UnicodeWidthChar::width(ch).unwrap_or(0)
+                    }
                 };
 
-                let display = truncate_to_width(&display_text, text_max_width);
-                buf.set_string(text_x, y, &display, styles.text);
+                // Adjust scroll_offset so the cursor is always visible.
+                // Scroll left if cursor moved before the viewport.
+                if state.cursor_pos < state.scroll_offset {
+                    state.scroll_offset = state.cursor_pos;
+                }
+                // Scroll right if cursor moved past the viewport.
+                loop {
+                    let visible_width: usize = state
+                        .value
+                        .chars()
+                        .skip(state.scroll_offset)
+                        .take(state.cursor_pos - state.scroll_offset)
+                        .map(&char_width)
+                        .sum();
+                    if visible_width <= text_max_width {
+                        break;
+                    }
+                    state.scroll_offset += 1;
+                }
 
-                // Visual cursor
+                // Render the visible portion of text
+                let visible_text = render_visible(
+                    &state.value,
+                    state.scroll_offset,
+                    text_max_width,
+                    self.password_mode,
+                    self.password_char,
+                );
+                buf.set_string(text_x, y, &visible_text, styles.text);
+
+                // Visual cursor (relative to scroll_offset)
                 if state.focused {
-                    let cursor_display_x = if self.password_mode {
-                        // Each password char has width 1 (for ASCII mask chars)
-                        state.cursor_pos * UnicodeWidthChar::width(self.password_char).unwrap_or(1)
-                    } else {
-                        // Sum display widths of chars before cursor
-                        state
-                            .value
-                            .chars()
-                            .take(state.cursor_pos)
-                            .map(|c| UnicodeWidthChar::width(c).unwrap_or(0))
-                            .sum()
-                    };
+                    let cursor_display_x: usize = state
+                        .value
+                        .chars()
+                        .skip(state.scroll_offset)
+                        .take(state.cursor_pos - state.scroll_offset)
+                        .map(&char_width)
+                        .sum();
 
                     let abs_x = text_x + cursor_display_x as u16;
                     if abs_x < area.right() {
@@ -551,6 +578,33 @@ fn truncate_to_width(text: &str, max_width: usize) -> String {
             break;
         }
         result.push(ch);
+        w += cw;
+    }
+    result
+}
+
+/// Renders the visible portion of text starting from `scroll_offset` chars in,
+/// fitting within `max_width` terminal cells. Applies password masking if enabled.
+fn render_visible(
+    value: &str,
+    scroll_offset: usize,
+    max_width: usize,
+    password_mode: bool,
+    password_char: char,
+) -> String {
+    let mask_width = UnicodeWidthChar::width(password_char).unwrap_or(1);
+    let mut result = String::new();
+    let mut w = 0;
+    for ch in value.chars().skip(scroll_offset) {
+        let cw = if password_mode {
+            mask_width
+        } else {
+            UnicodeWidthChar::width(ch).unwrap_or(0)
+        };
+        if w + cw > max_width {
+            break;
+        }
+        result.push(if password_mode { password_char } else { ch });
         w += cw;
     }
     result
@@ -628,19 +682,19 @@ mod tests {
     }
 
     #[test]
-    fn insert_char_limited_respects_limit() {
-        let mut state = InputState::new();
-        assert!(state.insert_char_limited('a', Some(2)));
-        assert!(state.insert_char_limited('b', Some(2)));
-        assert!(!state.insert_char_limited('c', Some(2)));
+    fn insert_char_respects_char_limit() {
+        let mut state = InputState::new().char_limit(2);
+        state.insert_char('a');
+        state.insert_char('b');
+        state.insert_char('c'); // should be ignored
         assert_eq!(state.value(), "ab");
     }
 
     #[test]
-    fn insert_char_limited_none_is_unlimited() {
+    fn insert_char_no_limit_is_unlimited() {
         let mut state = InputState::new();
         for _ in 0..100 {
-            assert!(state.insert_char_limited('x', None));
+            state.insert_char('x');
         }
         assert_eq!(state.value().len(), 100);
     }
@@ -975,5 +1029,59 @@ mod tests {
         let cursor_cell = &buf[ratatui::layout::Position::new(3, 1)];
         let styles = InputStyles::dark();
         assert_eq!(cursor_cell.bg, styles.cursor.bg.unwrap());
+    }
+
+    #[test]
+    fn render_long_input_scrolls_to_cursor() {
+        // Width 10: prompt "> " takes 2 cells, leaving 8 for text.
+        // Input "abcdefghij" (10 chars) with cursor at end.
+        let input = Input::new("T");
+        let mut state = InputState::new();
+        state.set_focused(true);
+        for ch in "abcdefghij".chars() {
+            state.insert_char(ch);
+        }
+        // cursor_pos = 10, text_max_width = 8
+        let area = Rect::new(0, 0, 10, 3);
+        let mut buf = Buffer::empty(area);
+        StatefulWidget::render(&input, area, &mut buf, &mut state);
+
+        // After scrolling, the visible text should end with the cursor at the
+        // rightmost cell. scroll_offset should be 2, showing "cdefghij".
+        let row: String = (0..10u16)
+            .map(|x| {
+                buf[ratatui::layout::Position::new(x, 1)]
+                    .symbol()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(row, "> cdefghij");
+        assert_eq!(state.scroll_offset, 2);
+    }
+
+    #[test]
+    fn render_long_input_cursor_moves_left_scrolls_back() {
+        let input = Input::new("T");
+        let mut state = InputState::new();
+        state.set_focused(true);
+        for ch in "abcdefghij".chars() {
+            state.insert_char(ch);
+        }
+        // Move cursor to the beginning
+        state.home();
+        let area = Rect::new(0, 0, 10, 3);
+        let mut buf = Buffer::empty(area);
+        StatefulWidget::render(&input, area, &mut buf, &mut state);
+
+        // scroll_offset should reset to 0, showing "abcdefgh"
+        let row: String = (0..10u16)
+            .map(|x| {
+                buf[ratatui::layout::Position::new(x, 1)]
+                    .symbol()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(row, "> abcdefgh");
+        assert_eq!(state.scroll_offset, 0);
     }
 }
