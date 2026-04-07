@@ -1,6 +1,7 @@
 use crossterm::event::KeyCode;
 use ratatui::Frame;
 use ratatui::layout::Rect;
+use ratatui::style::Style;
 use ratatui::widgets::{Block, Padding, Widget};
 use ratatui_cheese::help::{Binding, Help, HelpStyles};
 use ratatui_cheese::theme::Palette;
@@ -28,10 +29,16 @@ impl Component for HelpComponent {
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect) {
+    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool) {
         let title = if self.show_all { " Help: Full " } else { " Help: Short " };
+        let border_style = if focused {
+            Style::default().fg(palette.foreground)
+        } else {
+            Style::default().fg(palette.faint)
+        };
         let block = Block::bordered()
             .title(title)
+            .border_style(border_style)
             .padding(Padding::new(2, 2, 1, 1));
         let inner = block.inner(area);
         frame.render_widget(block, area);

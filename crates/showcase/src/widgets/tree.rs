@@ -34,8 +34,8 @@ impl Component for TreeComponent {
 
     fn handle_key(&mut self, key: KeyCode) {
         match key {
-            KeyCode::Char('n') => self.tree_state.select_next(&self.groups),
-            KeyCode::Char('N') => self.tree_state.select_prev(&self.groups),
+            KeyCode::Char('j') | KeyCode::Down => self.tree_state.select_next(&self.groups),
+            KeyCode::Char('k') | KeyCode::Up => self.tree_state.select_prev(&self.groups),
             KeyCode::Char('l') | KeyCode::Right => {
                 self.tree_state.expand(self.tree_state.selected().0);
             }
@@ -50,9 +50,15 @@ impl Component for TreeComponent {
         }
     }
 
-    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect) {
+    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool) {
+        let border_style = if focused {
+            Style::default().fg(palette.foreground)
+        } else {
+            Style::default().fg(palette.faint)
+        };
         let block = Block::bordered()
             .title(format!(" Tree: {} ", self.mode))
+            .border_style(border_style)
             .padding(Padding::new(2, 2, 1, 0));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -82,7 +88,7 @@ impl Component for TreeComponent {
 
         if let Some(hint_area) = hint_area {
             let hint = Line::from(Span::styled(
-                "n/N: navigate  h/l: fold/unfold  H/L: all  enter: toggle  c: mode",
+                "j/k: navigate  h/l: fold/unfold  H/L: all  enter: toggle  c: mode",
                 Style::default().fg(palette.faint),
             ));
             hint.render(hint_area, frame.buffer_mut());

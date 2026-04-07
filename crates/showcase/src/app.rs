@@ -10,14 +10,23 @@ use ratatui_cheese::theme::Palette;
 use crate::widgets::Component;
 use crate::widgets::fieldset::FieldsetComponent;
 use crate::widgets::help::HelpComponent;
+use crate::widgets::input::InputComponent;
 use crate::widgets::list::ListComponent;
 use crate::widgets::paginator::PaginatorComponent;
 use crate::widgets::spinner::SpinnerComponent;
 use crate::widgets::tree::TreeComponent;
 
+/// Which panel has focus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Focus {
+    Sidebar,
+    Detail,
+}
+
 pub struct App {
     components: Vec<Box<dyn Component>>,
     selected: usize,
+    focus: Focus,
     show_help: bool,
     palette_index: usize,
     palettes: Vec<(&'static str, Palette)>,
@@ -33,8 +42,10 @@ impl App {
                 Box::new(PaginatorComponent::new()),
                 Box::new(ListComponent::new()),
                 Box::new(FieldsetComponent::new()),
+                Box::new(InputComponent::new()),
             ],
             selected: 0,
+            focus: Focus::Sidebar,
             show_help: false,
             palette_index: 0,
             palettes: Palette::presets(),
@@ -43,6 +54,7 @@ impl App {
 
     /// Returns true if the app should quit.
     pub fn handle_key(&mut self, key: KeyCode) -> bool {
+        // F1 toggles help globally
         if key == KeyCode::F(1) {
             self.show_help = !self.show_help;
             return false;
@@ -53,15 +65,44 @@ impl App {
             return false;
         }
 
-        match key {
-            KeyCode::Char('q') | KeyCode::Esc => return true,
-            KeyCode::Char('p') => self.next_palette(),
-            KeyCode::Char('P') => self.prev_palette(),
-            KeyCode::Tab | KeyCode::Down | KeyCode::Char('j') => self.select_next(),
-            KeyCode::BackTab | KeyCode::Up | KeyCode::Char('k') => self.select_prev(),
-            key => self.components[self.selected].handle_key(key),
+        // Tab/BackTab toggles focus between sidebar and detail
+        if key == KeyCode::Tab || key == KeyCode::BackTab {
+            self.focus = match self.focus {
+                Focus::Sidebar => Focus::Detail,
+                Focus::Detail => Focus::Sidebar,
+            };
+            return false;
+        }
+
+        // Esc/q: quit from sidebar, return to sidebar from detail
+        if key == KeyCode::Esc || (key == KeyCode::Char('q') && self.focus == Focus::Sidebar) {
+            return match self.focus {
+                Focus::Sidebar => true,
+                Focus::Detail => {
+                    self.focus = Focus::Sidebar;
+                    false
+                }
+            };
+        }
+
+        match self.focus {
+            Focus::Sidebar => self.handle_sidebar_key(key),
+            Focus::Detail => self.components[self.selected].handle_key(key),
         }
         false
+    }
+
+    fn handle_sidebar_key(&mut self, key: KeyCode) {
+        match key {
+            KeyCode::Char('p') => self.next_palette(),
+            KeyCode::Char('P') => self.prev_palette(),
+            KeyCode::Down | KeyCode::Char('j') => self.select_next(),
+            KeyCode::Up | KeyCode::Char('k') => self.select_prev(),
+            KeyCode::Enter | KeyCode::Right | KeyCode::Char('l') => {
+                self.focus = Focus::Detail;
+            }
+            _ => {}
+        }
     }
 
     pub fn draw(&mut self, frame: &mut Frame) {
@@ -81,12 +122,18 @@ impl App {
             self.draw_sidebar(frame, &palette, sidebar_area);
         }
 
-        self.components[self.selected].draw(frame, &palette, detail_area);
+        self.draw_detail(frame, &palette, detail_area);
     }
 
     fn draw_sidebar(&self, frame: &mut Frame, palette: &Palette, area: Rect) {
+        let border_style = if self.focus == Focus::Sidebar {
+            Style::default().fg(palette.foreground)
+        } else {
+            Style::default().fg(palette.faint)
+        };
         let block = Block::bordered()
             .title(format!(" {} ", self.palette_name()))
+            .border_style(border_style)
             .padding(Padding::horizontal(1));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -120,6 +167,11 @@ impl App {
         }
     }
 
+    fn draw_detail(&mut self, frame: &mut Frame, palette: &Palette, area: Rect) {
+        let focused = self.focus == Focus::Detail;
+        self.components[self.selected].draw(frame, palette, area, focused);
+    }
+
     fn draw_help_overlay(&self, frame: &mut Frame, palette: &Palette, area: Rect) {
         let block = Block::bordered()
             .title(" Help ")
@@ -135,8 +187,9 @@ impl App {
             .binding_groups(vec![vec![
                 Binding::new("j/k", "select widget"),
                 Binding::new("p/P", "cycle theme"),
+                Binding::new("tab", "switch focus"),
+                Binding::new("esc", "back / quit"),
                 Binding::new("F1", "toggle help"),
-                Binding::new("q", "quit"),
             ]])
             .styles(HelpStyles::from_palette(palette))
             .show_all(true);
