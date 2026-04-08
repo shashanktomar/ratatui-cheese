@@ -27,3 +27,10 @@ pub enum ValidationKind {
     /// Validation passed — the field value is valid.
     Success,
 }
+
+/// The result type returned by a validator function.
+///
+/// - `Ok(None)` — valid, no message shown
+/// - `Ok(Some("msg"))` — valid, show success message
+/// - `Err("msg")` — invalid, show error message
+pub type ValidationResult = Result<Option<String>, String>;
