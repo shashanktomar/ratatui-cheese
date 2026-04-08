@@ -81,12 +81,7 @@ fn make_variants() -> Vec<VariantData> {
             cursor_indicator: ">",
             initial_cursor: 0,
             live_validate: false,
-            state: {
-                let mut s = SelectState::new(4);
-                s.set_enabled(1, false);
-                s.set_enabled(3, false);
-                s
-            },
+            state: SelectState::new(4),
         },
         VariantData {
             name: "Validation",
@@ -123,6 +118,7 @@ impl SelectComponent {
         let mut variants = make_variants();
         let count = variants.len();
         let v = &mut variants[0];
+        v.state.sync_options(&v.options);
         v.state.set_cursor(v.initial_cursor);
         v.state.set_focused(true);
         Self {
@@ -135,6 +131,7 @@ impl SelectComponent {
     fn reset_variant(&mut self, index: usize) {
         let mut new_variants = make_variants();
         let v = &mut new_variants[index];
+        v.state.sync_options(&v.options);
         v.state.set_cursor(v.initial_cursor);
         v.state.set_focused(true);
         if v.name == "Validation" {

@@ -246,7 +246,8 @@ impl SelectState {
     /// Creates a new state for a select with the given number of options.
     ///
     /// All options are enabled by default. Use [`set_enabled`](Self::set_enabled)
-    /// to disable specific options.
+    /// to disable specific options, or [`from_options`](Self::from_options) to
+    /// derive the state from the option slice directly.
     pub fn new(total: usize) -> Self {
         Self {
             cursor: 0,
@@ -255,6 +256,33 @@ impl SelectState {
             focused: false,
             validation_message: None,
             validator: None,
+        }
+    }
+
+    /// Creates a new state from an option slice, picking up each option's
+    /// `enabled` flag so that navigation and rendering stay consistent.
+    pub fn from_options(options: &[SelectOption]) -> Self {
+        Self {
+            cursor: 0,
+            total: options.len(),
+            enabled: options.iter().map(|o| o.enabled).collect(),
+            focused: false,
+            validation_message: None,
+            validator: None,
+        }
+    }
+
+    /// Synchronises the state with a (possibly changed) option slice.
+    ///
+    /// Updates the total count, copies each option's `enabled` flag, and
+    /// clamps the cursor so it never points past the end of the list.
+    pub fn sync_options(&mut self, options: &[SelectOption]) {
+        self.total = options.len();
+        self.enabled = options.iter().map(|o| o.enabled).collect();
+        if self.total == 0 {
+            self.cursor = 0;
+        } else {
+            self.cursor = self.cursor.min(self.total - 1);
         }
     }
 
@@ -460,7 +488,8 @@ impl StatefulWidget for &Select<'_> {
             let max_label_width = area.width.saturating_sub(indent as u16) as usize;
             let label = truncate_to_width(option.label, max_label_width);
 
-            if !option.enabled {
+            let is_disabled = !state.enabled.get(i).copied().unwrap_or(true);
+            if is_disabled {
                 buf.set_string(label_x, y, &label, styles.disabled);
             } else if is_cursor {
                 buf.set_string(area.x, y, self.cursor_indicator, styles.cursor);
@@ -635,6 +664,49 @@ mod tests {
         state.set_cursor(4);
         state.set_total(2);
         assert_eq!(state.selected(), 1);
+    }
+
+    #[test]
+    fn from_options_picks_up_enabled() {
+        let opts = vec![
+            SelectOption::new("A"),
+            SelectOption::new("B").enabled(false),
+            SelectOption::new("C"),
+        ];
+        let mut state = SelectState::from_options(&opts);
+        state.next(); // should skip B
+        assert_eq!(state.selected(), 2);
+    }
+
+    #[test]
+    fn sync_options_updates_enabled_and_clamps() {
+        let mut state = SelectState::new(5);
+        state.set_cursor(4);
+
+        let shorter: Vec<SelectOption> = vec!["X".into(), SelectOption::new("Y").enabled(false)];
+        state.sync_options(&shorter);
+
+        assert_eq!(state.selected(), 1); // clamped from 4 to 1
+        state.next(); // Y is disabled, wraps to X
+        assert_eq!(state.selected(), 0);
+    }
+
+    #[test]
+    fn render_uses_state_enabled_not_option_enabled() {
+        // Option says enabled, but state says disabled — state wins
+        let opts = options(&["A", "B", "C"]);
+        let select = Select::new("Pick", &opts);
+        let mut state = SelectState::new(3);
+        state.set_enabled(0, false);
+
+        let area = Rect::new(0, 0, 15, 4);
+        let mut buf = Buffer::empty(area);
+        StatefulWidget::render(&select, area, &mut buf, &mut state);
+
+        let p = Palette::dark();
+        // "A" at row 1 should be rendered with disabled (faint) style
+        let a_cell = &buf[ratatui::layout::Position::new(2, 1)];
+        assert_eq!(a_cell.fg, p.faint);
     }
 
     #[test]
@@ -853,7 +925,7 @@ mod tests {
             SelectOption::new("Titan"),
         ];
         let select = Select::new("Pick", &opts);
-        let mut state = SelectState::new(3);
+        let mut state = SelectState::from_options(&opts);
         assert_renders_content(
             &select,
             &mut state,
