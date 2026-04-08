@@ -12,7 +12,7 @@
 //! let select = Select::new("Pick a fruit", &options);
 //!
 //! let mut state = SelectState::new(options.len());
-//! state.next(&options);
+//! state.next();
 //! assert_eq!(state.selected(), 1);
 //! ```
 
@@ -211,12 +211,13 @@ impl<'a> Select<'a> {
 /// let mut state = SelectState::new(options.len());
 /// assert_eq!(state.selected(), 0);
 ///
-/// state.next(&options);
+/// state.next();
 /// assert_eq!(state.selected(), 1);
 /// ```
 pub struct SelectState {
     cursor: usize,
     total: usize,
+    enabled: Vec<bool>,
     focused: bool,
     validation_message: Option<(ValidationKind, String)>,
     validator: Option<Box<dyn Fn(usize) -> ValidationResult>>,
@@ -227,6 +228,7 @@ impl std::fmt::Debug for SelectState {
         f.debug_struct("SelectState")
             .field("cursor", &self.cursor)
             .field("total", &self.total)
+            .field("enabled", &self.enabled)
             .field("focused", &self.focused)
             .field("validation_message", &self.validation_message)
             .field("validator", &self.validator.as_ref().map(|_| ".."))
@@ -242,13 +244,40 @@ impl Default for SelectState {
 
 impl SelectState {
     /// Creates a new state for a select with the given number of options.
+    ///
+    /// All options are enabled by default. Use [`set_enabled`](Self::set_enabled)
+    /// to disable specific options.
     pub fn new(total: usize) -> Self {
         Self {
             cursor: 0,
             total,
+            enabled: vec![true; total],
             focused: false,
             validation_message: None,
             validator: None,
+        }
+    }
+
+    /// Marks an option as enabled or disabled.
+    ///
+    /// Disabled options are skipped by [`next`](Self::next) and
+    /// [`prev`](Self::prev). If the cursor is currently on the given
+    /// index and it becomes disabled, the cursor is **not** moved
+    /// automatically — call `next` or `prev` to advance it.
+    pub fn set_enabled(&mut self, index: usize, enabled: bool) {
+        if index < self.enabled.len() {
+            self.enabled[index] = enabled;
+        }
+    }
+
+    /// Updates the total number of options and clamps the cursor.
+    pub fn set_total(&mut self, total: usize) {
+        self.total = total;
+        self.enabled.resize(total, true);
+        if total == 0 {
+            self.cursor = 0;
+        } else {
+            self.cursor = self.cursor.min(total - 1);
         }
     }
 
@@ -271,14 +300,13 @@ impl SelectState {
     ///
     /// Skips disabled options. If all options are disabled, the cursor
     /// does not move.
-    pub fn next(&mut self, options: &[SelectOption]) {
-        let total = options.len();
-        if total == 0 {
+    pub fn next(&mut self) {
+        if self.total == 0 {
             return;
         }
-        for _ in 0..total {
-            self.cursor = (self.cursor + 1) % total;
-            if options[self.cursor].enabled {
+        for _ in 0..self.total {
+            self.cursor = (self.cursor + 1) % self.total;
+            if self.enabled.get(self.cursor).copied().unwrap_or(true) {
                 return;
             }
         }
@@ -288,25 +316,24 @@ impl SelectState {
     ///
     /// Skips disabled options. If all options are disabled, the cursor
     /// does not move.
-    pub fn prev(&mut self, options: &[SelectOption]) {
-        let total = options.len();
-        if total == 0 {
+    pub fn prev(&mut self) {
+        if self.total == 0 {
             return;
         }
-        for _ in 0..total {
-            self.cursor = if self.cursor == 0 { total - 1 } else { self.cursor - 1 };
-            if options[self.cursor].enabled {
+        for _ in 0..self.total {
+            self.cursor = if self.cursor == 0 { self.total - 1 } else { self.cursor - 1 };
+            if self.enabled.get(self.cursor).copied().unwrap_or(true) {
                 return;
             }
         }
     }
 
     /// Sets the cursor directly (clamps to valid range).
-    pub fn set_cursor(&mut self, index: usize, total: usize) {
-        if total == 0 {
+    pub fn set_cursor(&mut self, index: usize) {
+        if self.total == 0 {
             self.cursor = 0;
         } else {
-            self.cursor = index.min(total - 1);
+            self.cursor = index.min(self.total - 1);
         }
     }
 
@@ -416,7 +443,10 @@ impl StatefulWidget for &Select<'_> {
             y += 1;
         }
 
-        // 3. Options
+        // 3. Options — clamp cursor to actual options length
+        if !self.options.is_empty() {
+            state.cursor = state.cursor.min(self.options.len() - 1);
+        }
         let cursor_width = display_width(self.cursor_indicator);
         let indent = cursor_width + 1; // cursor + space
 
@@ -532,84 +562,79 @@ mod tests {
 
     #[test]
     fn next_wraps() {
-        let opts = options(&["A", "B", "C"]);
         let mut state = SelectState::new(3);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 1);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 2);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn prev_wraps() {
-        let opts = options(&["A", "B", "C"]);
         let mut state = SelectState::new(3);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.selected(), 2);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.selected(), 1);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn next_zero_options() {
-        let opts: Vec<SelectOption> = vec![];
         let mut state = SelectState::new(0);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn next_skips_disabled() {
-        let opts = vec![
-            SelectOption::new("A"),
-            SelectOption::new("B").enabled(false),
-            SelectOption::new("C"),
-        ];
         let mut state = SelectState::new(3);
-        state.next(&opts); // skips B, lands on C
+        state.set_enabled(1, false);
+        state.next(); // skips index 1, lands on 2
         assert_eq!(state.selected(), 2);
     }
 
     #[test]
     fn prev_skips_disabled() {
-        let opts = vec![
-            SelectOption::new("A"),
-            SelectOption::new("B").enabled(false),
-            SelectOption::new("C"),
-        ];
         let mut state = SelectState::new(3);
-        state.set_cursor(2, 3);
-        state.prev(&opts); // skips B, lands on A
+        state.set_enabled(1, false);
+        state.set_cursor(2);
+        state.prev(); // skips index 1, lands on 0
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn all_disabled_no_move() {
-        let opts = vec![
-            SelectOption::new("A").enabled(false),
-            SelectOption::new("B").enabled(false),
-        ];
         let mut state = SelectState::new(2);
-        state.next(&opts);
+        state.set_enabled(0, false);
+        state.set_enabled(1, false);
+        state.next();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn set_cursor_clamps() {
         let mut state = SelectState::new(3);
-        state.set_cursor(10, 3);
+        state.set_cursor(10);
         assert_eq!(state.selected(), 2);
     }
 
     #[test]
     fn set_cursor_zero_total() {
         let mut state = SelectState::new(0);
-        state.set_cursor(5, 0);
+        state.set_cursor(5);
         assert_eq!(state.selected(), 0);
+    }
+
+    #[test]
+    fn set_total_shrinks_clamps_cursor() {
+        let mut state = SelectState::new(5);
+        state.set_cursor(4);
+        state.set_total(2);
+        assert_eq!(state.selected(), 1);
     }
 
     #[test]
@@ -618,7 +643,7 @@ mod tests {
             if i == 1 { Err("Not allowed".into()) } else { Ok(None) }
         });
 
-        state.set_cursor(1, 3);
+        state.set_cursor(1);
         state.set_focused(true);
         state.set_focused(false);
 
@@ -633,12 +658,12 @@ mod tests {
             if i == 1 { Err("Not allowed".into()) } else { Ok(None) }
         });
 
-        state.set_cursor(1, 3);
+        state.set_cursor(1);
         state.set_focused(true);
         state.set_focused(false);
         assert!(state.validation().is_some());
 
-        state.set_cursor(0, 3);
+        state.set_cursor(0);
         state.set_focused(true);
         state.set_focused(false);
         assert!(state.validation().is_none());
@@ -687,7 +712,7 @@ mod tests {
         let opts = options(&["A", "B", "C"]);
         let select = Select::new("Pick", &opts);
         let mut state = SelectState::new(3);
-        state.next(&opts);
+        state.next();
         assert_renders_content(
             &select,
             &mut state,

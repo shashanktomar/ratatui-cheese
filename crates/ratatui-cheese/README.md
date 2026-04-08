@@ -303,8 +303,8 @@ let select = Select::new("Destination", &options)
 let mut state = SelectState::new(options.len());
 
 // Navigation:
-// state.next(&options);   // move cursor down
-// state.prev(&options);   // move cursor up
+// state.next();   // move cursor down
+// state.prev();   // move cursor up
 
 // In your draw function:
 // frame.render_stateful_widget(&select, area, &mut state);

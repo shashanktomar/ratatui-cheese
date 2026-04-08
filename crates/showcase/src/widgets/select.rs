@@ -81,7 +81,12 @@ fn make_variants() -> Vec<VariantData> {
             cursor_indicator: ">",
             initial_cursor: 0,
             live_validate: false,
-            state: SelectState::new(4),
+            state: {
+                let mut s = SelectState::new(4);
+                s.set_enabled(1, false);
+                s.set_enabled(3, false);
+                s
+            },
         },
         VariantData {
             name: "Validation",
@@ -118,7 +123,7 @@ impl SelectComponent {
         let mut variants = make_variants();
         let count = variants.len();
         let v = &mut variants[0];
-        v.state.set_cursor(v.initial_cursor, v.options.len());
+        v.state.set_cursor(v.initial_cursor);
         v.state.set_focused(true);
         Self {
             variants,
@@ -130,7 +135,7 @@ impl SelectComponent {
     fn reset_variant(&mut self, index: usize) {
         let mut new_variants = make_variants();
         let v = &mut new_variants[index];
-        v.state.set_cursor(v.initial_cursor, v.options.len());
+        v.state.set_cursor(v.initial_cursor);
         v.state.set_focused(true);
         if v.name == "Validation" {
             v.state.validate();
@@ -167,17 +172,15 @@ impl Component for SelectComponent {
                 });
             }
             KeyCode::Char('j') | KeyCode::Down => {
-                let opts = self.variants[self.variant_index].options.clone();
                 let live = self.variants[self.variant_index].live_validate;
-                self.variants[self.variant_index].state.next(&opts);
+                self.variants[self.variant_index].state.next();
                 if live {
                     self.variants[self.variant_index].state.validate();
                 }
             }
             KeyCode::Char('k') | KeyCode::Up => {
-                let opts = self.variants[self.variant_index].options.clone();
                 let live = self.variants[self.variant_index].live_validate;
-                self.variants[self.variant_index].state.prev(&opts);
+                self.variants[self.variant_index].state.prev();
                 if live {
                     self.variants[self.variant_index].state.validate();
                 }
