@@ -13,14 +13,13 @@ use super::Component;
 struct Variant {
     name: &'static str,
     setup: fn(&Palette) -> (Input<'static>, InputState),
-    char_limit: Option<usize>,
     live_validate: bool,
 }
 
 const VARIANTS: &[Variant] = &[
     Variant {
         name: "Basic",
-        char_limit: None,
+
         live_validate: false,
         setup: |p| {
             let input = Input::new("What's your name?")
@@ -35,7 +34,7 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "No description",
-        char_limit: None,
+
         live_validate: false,
         setup: |p| {
             let input = Input::new("Email")
@@ -55,7 +54,7 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Custom prompt",
-        char_limit: None,
+
         live_validate: false,
         setup: |p| {
             let input = Input::new("Search")
@@ -69,7 +68,7 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Password mode",
-        char_limit: None,
+
         live_validate: false,
         setup: |p| {
             let input = Input::new("Password")
@@ -85,7 +84,7 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "With value",
-        char_limit: None,
+
         live_validate: false,
         setup: |p| {
             let input = Input::new("Package")
@@ -101,7 +100,7 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Validation",
-        char_limit: None,
+
         live_validate: false,
         setup: |p| {
             let input = Input::new("Email")
@@ -125,7 +124,7 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Live validation",
-        char_limit: None,
+
         live_validate: true,
         setup: |p| {
             let input = Input::new("ISBN")
@@ -148,14 +147,12 @@ const VARIANTS: &[Variant] = &[
     },
     Variant {
         name: "Char limit (5)",
-        char_limit: Some(5),
         live_validate: false,
         setup: |p| {
             let input = Input::new("PIN")
                 .description("Enter your 5-digit PIN.")
-                .char_limit(5)
                 .palette(p);
-            let state = InputState::new().validator(|v| {
+            let state = InputState::new().char_limit(5).validator(|v| {
                 if v.len() != 5 { Err("PIN must be exactly 5 digits".into()) } else { Ok(None) }
             });
             (input, state)
@@ -240,8 +237,7 @@ impl Component for InputComponent {
                 }
             }
             KeyCode::Char(c) => {
-                self.input_state
-                    .insert_char_limited(c, self.variant().char_limit);
+                self.input_state.insert_char(c);
                 if self.variant().live_validate {
                     self.input_state.validate();
                 }
@@ -251,6 +247,11 @@ impl Component for InputComponent {
     }
 
     fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool) {
+        // Sync focus state so blur validation fires when leaving the detail pane
+        if self.input_state.focused() != focused {
+            self.input_state.set_focused(focused);
+        }
+
         // Refresh input styles if palette changed
         if *palette != self.last_palette {
             self.last_palette = palette.clone();

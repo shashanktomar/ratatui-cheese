@@ -211,12 +211,13 @@ impl<'a> Select<'a> {
 /// let mut state = SelectState::new(options.len());
 /// assert_eq!(state.selected(), 0);
 ///
-/// state.next(&options);
+/// state.next();
 /// assert_eq!(state.selected(), 1);
 /// ```
 pub struct SelectState {
     cursor: usize,
     total: usize,
+    enabled: Vec<bool>,
     focused: bool,
     validation_message: Option<(ValidationKind, String)>,
     validator: Option<Box<dyn Fn(usize) -> ValidationResult>>,
@@ -227,6 +228,7 @@ impl std::fmt::Debug for SelectState {
         f.debug_struct("SelectState")
             .field("cursor", &self.cursor)
             .field("total", &self.total)
+            .field("enabled", &self.enabled)
             .field("focused", &self.focused)
             .field("validation_message", &self.validation_message)
             .field("validator", &self.validator.as_ref().map(|_| ".."))
@@ -242,14 +244,43 @@ impl Default for SelectState {
 
 impl SelectState {
     /// Creates a new state for a select with the given number of options.
+    ///
+    /// All options are enabled by default. Use [`from_options`](Self::from_options)
+    /// or [`sync_options`](Self::sync_options) to derive enabled/disabled flags
+    /// from the option slice.
     pub fn new(total: usize) -> Self {
         Self {
             cursor: 0,
             total,
+            enabled: vec![true; total],
             focused: false,
             validation_message: None,
             validator: None,
         }
+    }
+
+    /// Creates a new state from an option slice, picking up each option's
+    /// `enabled` flag so that navigation and rendering stay consistent.
+    pub fn from_options(options: &[SelectOption]) -> Self {
+        Self {
+            cursor: 0,
+            total: options.len(),
+            enabled: options.iter().map(|o| o.enabled).collect(),
+            focused: false,
+            validation_message: None,
+            validator: None,
+        }
+    }
+
+    /// Synchronises the state with a (possibly changed) option slice.
+    ///
+    /// Updates the total count, copies each option's `enabled` flag, and
+    /// clamps the cursor so it never points past the end of the list.
+    pub fn sync_options(&mut self, options: &[SelectOption]) {
+        self.total = options.len();
+        self.enabled = options.iter().map(|o| o.enabled).collect();
+        // Re-apply set_cursor to clamp and snap past disabled options.
+        self.set_cursor(self.cursor);
     }
 
     /// Sets a validator function that runs on blur.
@@ -271,14 +302,13 @@ impl SelectState {
     ///
     /// Skips disabled options. If all options are disabled, the cursor
     /// does not move.
-    pub fn next(&mut self, options: &[SelectOption]) {
-        let total = options.len();
-        if total == 0 {
+    pub fn next(&mut self) {
+        if self.total == 0 {
             return;
         }
-        for _ in 0..total {
-            self.cursor = (self.cursor + 1) % total;
-            if options[self.cursor].enabled {
+        for _ in 0..self.total {
+            self.cursor = (self.cursor + 1) % self.total;
+            if self.enabled.get(self.cursor).copied().unwrap_or(true) {
                 return;
             }
         }
@@ -288,25 +318,40 @@ impl SelectState {
     ///
     /// Skips disabled options. If all options are disabled, the cursor
     /// does not move.
-    pub fn prev(&mut self, options: &[SelectOption]) {
-        let total = options.len();
-        if total == 0 {
+    pub fn prev(&mut self) {
+        if self.total == 0 {
             return;
         }
-        for _ in 0..total {
-            self.cursor = if self.cursor == 0 { total - 1 } else { self.cursor - 1 };
-            if options[self.cursor].enabled {
+        for _ in 0..self.total {
+            self.cursor = if self.cursor == 0 { self.total - 1 } else { self.cursor - 1 };
+            if self.enabled.get(self.cursor).copied().unwrap_or(true) {
                 return;
             }
         }
     }
 
-    /// Sets the cursor directly (clamps to valid range).
-    pub fn set_cursor(&mut self, index: usize, total: usize) {
-        if total == 0 {
+    /// Sets the cursor directly.
+    ///
+    /// Clamps to valid range and snaps forward to the nearest enabled
+    /// option. If no enabled option exists, the cursor stays at the
+    /// clamped position.
+    pub fn set_cursor(&mut self, index: usize) {
+        if self.total == 0 {
             self.cursor = 0;
-        } else {
-            self.cursor = index.min(total - 1);
+            return;
+        }
+        self.cursor = index.min(self.total - 1);
+        // Snap forward to the nearest enabled option
+        if !self.enabled.get(self.cursor).copied().unwrap_or(true) {
+            let start = self.cursor;
+            for _ in 0..self.total {
+                self.cursor = (self.cursor + 1) % self.total;
+                if self.enabled.get(self.cursor).copied().unwrap_or(true) {
+                    return;
+                }
+            }
+            // All disabled — stay at clamped position
+            self.cursor = start;
         }
     }
 
@@ -416,7 +461,10 @@ impl StatefulWidget for &Select<'_> {
             y += 1;
         }
 
-        // 3. Options
+        // 3. Options — clamp cursor to actual options length
+        if !self.options.is_empty() {
+            state.cursor = state.cursor.min(self.options.len() - 1);
+        }
         let cursor_width = display_width(self.cursor_indicator);
         let indent = cursor_width + 1; // cursor + space
 
@@ -430,7 +478,8 @@ impl StatefulWidget for &Select<'_> {
             let max_label_width = area.width.saturating_sub(indent as u16) as usize;
             let label = truncate_to_width(option.label, max_label_width);
 
-            if !option.enabled {
+            let is_disabled = !state.enabled.get(i).copied().unwrap_or(true);
+            if is_disabled {
                 buf.set_string(label_x, y, &label, styles.disabled);
             } else if is_cursor {
                 buf.set_string(area.x, y, self.cursor_indicator, styles.cursor);
@@ -532,33 +581,30 @@ mod tests {
 
     #[test]
     fn next_wraps() {
-        let opts = options(&["A", "B", "C"]);
         let mut state = SelectState::new(3);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 1);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 2);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn prev_wraps() {
-        let opts = options(&["A", "B", "C"]);
         let mut state = SelectState::new(3);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.selected(), 2);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.selected(), 1);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn next_zero_options() {
-        let opts: Vec<SelectOption> = vec![];
         let mut state = SelectState::new(0);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.selected(), 0);
     }
 
@@ -569,8 +615,8 @@ mod tests {
             SelectOption::new("B").enabled(false),
             SelectOption::new("C"),
         ];
-        let mut state = SelectState::new(3);
-        state.next(&opts); // skips B, lands on C
+        let mut state = SelectState::from_options(&opts);
+        state.next(); // skips index 1, lands on 2
         assert_eq!(state.selected(), 2);
     }
 
@@ -581,9 +627,9 @@ mod tests {
             SelectOption::new("B").enabled(false),
             SelectOption::new("C"),
         ];
-        let mut state = SelectState::new(3);
-        state.set_cursor(2, 3);
-        state.prev(&opts); // skips B, lands on A
+        let mut state = SelectState::from_options(&opts);
+        state.set_cursor(2);
+        state.prev(); // skips index 1, lands on 0
         assert_eq!(state.selected(), 0);
     }
 
@@ -593,23 +639,92 @@ mod tests {
             SelectOption::new("A").enabled(false),
             SelectOption::new("B").enabled(false),
         ];
-        let mut state = SelectState::new(2);
-        state.next(&opts);
+        let mut state = SelectState::from_options(&opts);
+        state.next();
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn set_cursor_clamps() {
         let mut state = SelectState::new(3);
-        state.set_cursor(10, 3);
+        state.set_cursor(10);
+        assert_eq!(state.selected(), 2);
+    }
+
+    #[test]
+    fn set_cursor_snaps_past_disabled() {
+        let opts = vec![
+            SelectOption::new("A"),
+            SelectOption::new("B").enabled(false),
+            SelectOption::new("C"),
+        ];
+        let mut state = SelectState::from_options(&opts);
+        state.set_cursor(1); // B is disabled, should snap to C
         assert_eq!(state.selected(), 2);
     }
 
     #[test]
     fn set_cursor_zero_total() {
         let mut state = SelectState::new(0);
-        state.set_cursor(5, 0);
+        state.set_cursor(5);
         assert_eq!(state.selected(), 0);
+    }
+
+    #[test]
+    fn sync_options_shrinks_clamps_cursor() {
+        let mut state = SelectState::new(5);
+        state.set_cursor(4);
+        let shorter = options(&["A", "B"]);
+        state.sync_options(&shorter);
+        assert_eq!(state.selected(), 1);
+    }
+
+    #[test]
+    fn from_options_picks_up_enabled() {
+        let opts = vec![
+            SelectOption::new("A"),
+            SelectOption::new("B").enabled(false),
+            SelectOption::new("C"),
+        ];
+        let mut state = SelectState::from_options(&opts);
+        state.next(); // should skip B
+        assert_eq!(state.selected(), 2);
+    }
+
+    #[test]
+    fn sync_options_updates_enabled_and_clamps() {
+        let mut state = SelectState::new(5);
+        state.set_cursor(4);
+
+        let shorter: Vec<SelectOption> = vec!["X".into(), SelectOption::new("Y").enabled(false)];
+        state.sync_options(&shorter);
+
+        // Clamped from 4, then snapped past disabled Y to X
+        assert_eq!(state.selected(), 0);
+    }
+
+    #[test]
+    fn render_uses_state_enabled_not_option_enabled() {
+        // Widget options are all enabled, but state was built from a
+        // slice where "A" was disabled — render should follow state.
+        let widget_opts = options(&["A", "B", "C"]);
+        let select = Select::new("Pick", &widget_opts);
+
+        let state_opts = vec![
+            SelectOption::new("A").enabled(false),
+            "B".into(),
+            "C".into(),
+        ];
+        let mut state = SelectState::from_options(&state_opts);
+
+        let area = Rect::new(0, 0, 15, 4);
+        let mut buf = Buffer::empty(area);
+        StatefulWidget::render(&select, area, &mut buf, &mut state);
+
+        let p = Palette::dark();
+        // "A" at row 1 should be rendered with disabled (faint) style
+        let a_cell = &buf[ratatui::layout::Position::new(2, 1)];
+        assert_eq!(a_cell.fg, p.faint);
     }
 
     #[test]
@@ -618,7 +733,7 @@ mod tests {
             if i == 1 { Err("Not allowed".into()) } else { Ok(None) }
         });
 
-        state.set_cursor(1, 3);
+        state.set_cursor(1);
         state.set_focused(true);
         state.set_focused(false);
 
@@ -633,12 +748,12 @@ mod tests {
             if i == 1 { Err("Not allowed".into()) } else { Ok(None) }
         });
 
-        state.set_cursor(1, 3);
+        state.set_cursor(1);
         state.set_focused(true);
         state.set_focused(false);
         assert!(state.validation().is_some());
 
-        state.set_cursor(0, 3);
+        state.set_cursor(0);
         state.set_focused(true);
         state.set_focused(false);
         assert!(state.validation().is_none());
@@ -687,7 +802,7 @@ mod tests {
         let opts = options(&["A", "B", "C"]);
         let select = Select::new("Pick", &opts);
         let mut state = SelectState::new(3);
-        state.next(&opts);
+        state.next();
         assert_renders_content(
             &select,
             &mut state,
@@ -828,7 +943,7 @@ mod tests {
             SelectOption::new("Titan"),
         ];
         let select = Select::new("Pick", &opts);
-        let mut state = SelectState::new(3);
+        let mut state = SelectState::from_options(&opts);
         assert_renders_content(
             &select,
             &mut state,

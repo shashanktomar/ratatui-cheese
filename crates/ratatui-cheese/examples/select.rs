@@ -128,7 +128,8 @@ impl Model {
         let mut variants = make_variants();
         let count = variants.len();
         let v = &mut variants[0];
-        v.state.set_cursor(v.initial_cursor, v.options.len());
+        v.state.sync_options(&v.options);
+        v.state.set_cursor(v.initial_cursor);
         v.state.set_focused(true);
         Self {
             variants,
@@ -150,7 +151,8 @@ impl Model {
         self.variant_index = index;
         let mut new_variants = make_variants();
         let v = &mut new_variants[index];
-        v.state.set_cursor(v.initial_cursor, v.options.len());
+        v.state.sync_options(&v.options);
+        v.state.set_cursor(v.initial_cursor);
         v.state.set_focused(true);
         if v.name == "Validation" {
             v.state.validate();
@@ -190,21 +192,19 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
             && key.kind == KeyEventKind::Press
         {
             match key.code {
-                KeyCode::Esc => return Ok(()),
+                KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
                 KeyCode::Char('h') | KeyCode::Left => m.prev_variant(),
                 KeyCode::Char('l') | KeyCode::Right => m.next_variant(),
                 KeyCode::Char('j') | KeyCode::Down => {
-                    let opts = m.current().options.clone();
                     let live = m.current().live_validate;
-                    m.current_mut().state.next(&opts);
+                    m.current_mut().state.next();
                     if live {
                         m.current_mut().state.validate();
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    let opts = m.current().options.clone();
                     let live = m.current().live_validate;
-                    m.current_mut().state.prev(&opts);
+                    m.current_mut().state.prev();
                     if live {
                         m.current_mut().state.validate();
                     }
