@@ -320,6 +320,47 @@ See it in action:
 cargo run --example select
 ```
 
+### Multi Select
+
+Multiple-selection widget for toggling options on/off from a vertical list. Supports selection limits, disabled options, and validation. Inspired by Charmbracelet's huh multi-select field.
+
+<details>
+<summary>Usage</summary>
+
+```rust
+use ratatui_cheese::multi_select::{MultiSelect, MultiSelectOption, MultiSelectState};
+use ratatui_cheese::theme::Palette;
+
+let options: Vec<MultiSelectOption> = vec![
+    "Spectrometer".into(),
+    "Magnetometer".into(),
+    "Gravimeter".into(),
+];
+let multi = MultiSelect::new("Instruments", &options)
+    .description("Select instruments for your mission.");
+
+let mut state = MultiSelectState::new(options.len());
+
+// Navigation & toggling:
+// state.next(&options);    // move cursor down
+// state.prev(&options);    // move cursor up
+// state.toggle_current(None);  // toggle at cursor (pass Some(n) for limit)
+// state.select_all(&options, None);  // select all enabled
+
+// In your draw function:
+// frame.render_stateful_widget(&multi, area, &mut state);
+```
+
+</details>
+
+![Multi Select](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/multi_select.gif)
+
+See it in action:
+
+```sh
+cargo run --example multi_select
+```
+
 ## License
 
 MIT
