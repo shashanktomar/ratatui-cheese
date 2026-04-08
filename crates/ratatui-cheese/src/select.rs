@@ -245,9 +245,9 @@ impl Default for SelectState {
 impl SelectState {
     /// Creates a new state for a select with the given number of options.
     ///
-    /// All options are enabled by default. Use [`set_enabled`](Self::set_enabled)
-    /// to disable specific options, or [`from_options`](Self::from_options) to
-    /// derive the state from the option slice directly.
+    /// All options are enabled by default. Use [`from_options`](Self::from_options)
+    /// or [`sync_options`](Self::sync_options) to derive enabled/disabled flags
+    /// from the option slice.
     pub fn new(total: usize) -> Self {
         Self {
             cursor: 0,
@@ -279,34 +279,8 @@ impl SelectState {
     pub fn sync_options(&mut self, options: &[SelectOption]) {
         self.total = options.len();
         self.enabled = options.iter().map(|o| o.enabled).collect();
-        if self.total == 0 {
-            self.cursor = 0;
-        } else {
-            self.cursor = self.cursor.min(self.total - 1);
-        }
-    }
-
-    /// Marks an option as enabled or disabled.
-    ///
-    /// Disabled options are skipped by [`next`](Self::next) and
-    /// [`prev`](Self::prev). If the cursor is currently on the given
-    /// index and it becomes disabled, the cursor is **not** moved
-    /// automatically — call `next` or `prev` to advance it.
-    pub fn set_enabled(&mut self, index: usize, enabled: bool) {
-        if index < self.enabled.len() {
-            self.enabled[index] = enabled;
-        }
-    }
-
-    /// Updates the total number of options and clamps the cursor.
-    pub fn set_total(&mut self, total: usize) {
-        self.total = total;
-        self.enabled.resize(total, true);
-        if total == 0 {
-            self.cursor = 0;
-        } else {
-            self.cursor = self.cursor.min(total - 1);
-        }
+        // Re-apply set_cursor to clamp and snap past disabled options.
+        self.set_cursor(self.cursor);
     }
 
     /// Sets a validator function that runs on blur.
@@ -356,12 +330,28 @@ impl SelectState {
         }
     }
 
-    /// Sets the cursor directly (clamps to valid range).
+    /// Sets the cursor directly.
+    ///
+    /// Clamps to valid range and snaps forward to the nearest enabled
+    /// option. If no enabled option exists, the cursor stays at the
+    /// clamped position.
     pub fn set_cursor(&mut self, index: usize) {
         if self.total == 0 {
             self.cursor = 0;
-        } else {
-            self.cursor = index.min(self.total - 1);
+            return;
+        }
+        self.cursor = index.min(self.total - 1);
+        // Snap forward to the nearest enabled option
+        if !self.enabled.get(self.cursor).copied().unwrap_or(true) {
+            let start = self.cursor;
+            for _ in 0..self.total {
+                self.cursor = (self.cursor + 1) % self.total;
+                if self.enabled.get(self.cursor).copied().unwrap_or(true) {
+                    return;
+                }
+            }
+            // All disabled — stay at clamped position
+            self.cursor = start;
         }
     }
 
@@ -620,16 +610,24 @@ mod tests {
 
     #[test]
     fn next_skips_disabled() {
-        let mut state = SelectState::new(3);
-        state.set_enabled(1, false);
+        let opts = vec![
+            SelectOption::new("A"),
+            SelectOption::new("B").enabled(false),
+            SelectOption::new("C"),
+        ];
+        let mut state = SelectState::from_options(&opts);
         state.next(); // skips index 1, lands on 2
         assert_eq!(state.selected(), 2);
     }
 
     #[test]
     fn prev_skips_disabled() {
-        let mut state = SelectState::new(3);
-        state.set_enabled(1, false);
+        let opts = vec![
+            SelectOption::new("A"),
+            SelectOption::new("B").enabled(false),
+            SelectOption::new("C"),
+        ];
+        let mut state = SelectState::from_options(&opts);
         state.set_cursor(2);
         state.prev(); // skips index 1, lands on 0
         assert_eq!(state.selected(), 0);
@@ -637,9 +635,11 @@ mod tests {
 
     #[test]
     fn all_disabled_no_move() {
-        let mut state = SelectState::new(2);
-        state.set_enabled(0, false);
-        state.set_enabled(1, false);
+        let opts = vec![
+            SelectOption::new("A").enabled(false),
+            SelectOption::new("B").enabled(false),
+        ];
+        let mut state = SelectState::from_options(&opts);
         state.next();
         assert_eq!(state.selected(), 0);
     }
@@ -652,6 +652,18 @@ mod tests {
     }
 
     #[test]
+    fn set_cursor_snaps_past_disabled() {
+        let opts = vec![
+            SelectOption::new("A"),
+            SelectOption::new("B").enabled(false),
+            SelectOption::new("C"),
+        ];
+        let mut state = SelectState::from_options(&opts);
+        state.set_cursor(1); // B is disabled, should snap to C
+        assert_eq!(state.selected(), 2);
+    }
+
+    #[test]
     fn set_cursor_zero_total() {
         let mut state = SelectState::new(0);
         state.set_cursor(5);
@@ -659,10 +671,11 @@ mod tests {
     }
 
     #[test]
-    fn set_total_shrinks_clamps_cursor() {
+    fn sync_options_shrinks_clamps_cursor() {
         let mut state = SelectState::new(5);
         state.set_cursor(4);
-        state.set_total(2);
+        let shorter = options(&["A", "B"]);
+        state.sync_options(&shorter);
         assert_eq!(state.selected(), 1);
     }
 
@@ -686,18 +699,23 @@ mod tests {
         let shorter: Vec<SelectOption> = vec!["X".into(), SelectOption::new("Y").enabled(false)];
         state.sync_options(&shorter);
 
-        assert_eq!(state.selected(), 1); // clamped from 4 to 1
-        state.next(); // Y is disabled, wraps to X
+        // Clamped from 4, then snapped past disabled Y to X
         assert_eq!(state.selected(), 0);
     }
 
     #[test]
     fn render_uses_state_enabled_not_option_enabled() {
-        // Option says enabled, but state says disabled — state wins
-        let opts = options(&["A", "B", "C"]);
-        let select = Select::new("Pick", &opts);
-        let mut state = SelectState::new(3);
-        state.set_enabled(0, false);
+        // Widget options are all enabled, but state was built from a
+        // slice where "A" was disabled — render should follow state.
+        let widget_opts = options(&["A", "B", "C"]);
+        let select = Select::new("Pick", &widget_opts);
+
+        let state_opts = vec![
+            SelectOption::new("A").enabled(false),
+            "B".into(),
+            "C".into(),
+        ];
+        let mut state = SelectState::from_options(&state_opts);
 
         let area = Rect::new(0, 0, 15, 4);
         let mut buf = Buffer::empty(area);
