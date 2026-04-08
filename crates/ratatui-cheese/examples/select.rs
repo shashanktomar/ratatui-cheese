@@ -192,7 +192,7 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
             && key.kind == KeyEventKind::Press
         {
             match key.code {
-                KeyCode::Esc => return Ok(()),
+                KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
                 KeyCode::Char('h') | KeyCode::Left => m.prev_variant(),
                 KeyCode::Char('l') | KeyCode::Right => m.next_variant(),
                 KeyCode::Char('j') | KeyCode::Down => {
