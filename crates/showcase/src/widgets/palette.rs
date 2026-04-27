@@ -50,9 +50,15 @@ impl Component for PaletteComponent {
 
     fn handle_key(&mut self, _key: KeyCode) {}
 
-    fn draw(&mut self, frame: &mut Frame, _palette: &Palette, area: Rect) {
+    fn draw(&mut self, frame: &mut Frame, app_palette: &Palette, area: Rect, focused: bool) {
+        let border_style = if focused {
+            Style::default().fg(app_palette.foreground)
+        } else {
+            Style::default().fg(app_palette.faint)
+        };
         let block = Block::bordered()
             .title(" Palette ")
+            .border_style(border_style)
             .padding(Padding::new(2, 2, 1, 1));
         let inner = block.inner(area);
         frame.render_widget(block, area);

@@ -65,6 +65,30 @@ Container widget with decorated horizontal rule lines and optional titles. Suppo
 
 [Usage & docs](crates/ratatui-cheese/README.md#fieldset)
 
+### Input
+
+Single-line text input with placeholder, password mode, character limit, custom prompt, and validation.
+
+![Input](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/input.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#input)
+
+### Select
+
+Single-selection widget for picking one option from a vertical list. Supports disabled options, custom cursor, and validation.
+
+![Select](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/select.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#select)
+
+### Multi Select
+
+Multiple-selection widget for toggling options on/off from a vertical list. Supports selection limits, disabled options, and validation.
+
+![Multi Select](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/multi_select.gif)
+
+[Usage & docs](crates/ratatui-cheese/README.md#multi-select)
+
 ### Palette
 
 Semantic color palette with 5 built-in presets. All widgets derive their styles from a shared `Palette`.

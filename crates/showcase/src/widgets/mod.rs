@@ -1,8 +1,11 @@
 pub mod fieldset;
 pub mod help;
+pub mod input;
 pub mod list;
+pub mod multi_select;
 pub mod paginator;
 pub mod palette;
+pub mod select;
 pub mod spinner;
 pub mod tree;
 
@@ -22,7 +25,10 @@ pub trait Component {
     fn handle_key(&mut self, key: KeyCode);
 
     /// Draw the component into the given area.
-    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect);
+    ///
+    /// `focused` indicates whether the detail panel has focus. Components
+    /// should use this to dim their border when not focused.
+    fn draw(&mut self, frame: &mut Frame, palette: &Palette, area: Rect, focused: bool);
 
     /// Called every frame for animations. Default is no-op.
     fn tick(&mut self) {}
