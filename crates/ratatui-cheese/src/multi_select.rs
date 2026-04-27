@@ -12,7 +12,7 @@
 //! let options: Vec<MultiSelectOption> = vec!["Apple".into(), "Banana".into(), "Cherry".into()];
 //! let multi = MultiSelect::new("Pick fruits", &options);
 //!
-//! let mut state = MultiSelectState::new(options.len());
+//! let mut state = MultiSelectState::from_options(&options);
 //! state.toggle_current(None);
 //! assert!(state.is_selected(0));
 //! ```
@@ -237,12 +237,12 @@ impl<'a> MultiSelect<'a> {
 /// use ratatui_cheese::multi_select::{MultiSelectOption, MultiSelectState};
 ///
 /// let options: Vec<MultiSelectOption> = vec!["A".into(), "B".into(), "C".into()];
-/// let mut state = MultiSelectState::new(options.len());
+/// let mut state = MultiSelectState::from_options(&options);
 /// state.toggle_current(None);
 /// assert!(state.is_selected(0));
 /// assert_eq!(state.selected_count(), 1);
 ///
-/// state.next(&options);
+/// state.next();
 /// state.toggle_current(None);
 /// assert_eq!(state.selected_indices(), vec![0, 1]);
 /// ```
@@ -251,6 +251,7 @@ type Validator = Box<dyn Fn(&[bool]) -> ValidationResult>;
 pub struct MultiSelectState {
     cursor: usize,
     selected: Vec<bool>,
+    enabled: Vec<bool>,
     focused: bool,
     validation_message: Option<(ValidationKind, String)>,
     validator: Option<Validator>,
@@ -261,6 +262,7 @@ impl std::fmt::Debug for MultiSelectState {
         f.debug_struct("MultiSelectState")
             .field("cursor", &self.cursor)
             .field("selected", &self.selected)
+            .field("enabled", &self.enabled)
             .field("focused", &self.focused)
             .field("validation_message", &self.validation_message)
             .field("validator", &self.validator.as_ref().map(|_| ".."))
@@ -276,15 +278,45 @@ impl Default for MultiSelectState {
 
 impl MultiSelectState {
     /// Creates a new state for a multi-select with the given number of
-    /// options. All options start unselected.
+    /// options. All options start unselected and enabled. Use
+    /// [`from_options`](Self::from_options) or [`sync_options`](Self::sync_options)
+    /// to derive enabled/disabled flags from the option slice.
     pub fn new(count: usize) -> Self {
         Self {
             cursor: 0,
             selected: vec![false; count],
+            enabled: vec![true; count],
             focused: false,
             validation_message: None,
             validator: None,
         }
+    }
+
+    /// Creates a new state from an option slice, picking up each option's
+    /// `enabled` flag so navigation, toggling, and rendering stay coherent.
+    pub fn from_options(options: &[MultiSelectOption]) -> Self {
+        let mut state = Self {
+            cursor: 0,
+            selected: vec![false; options.len()],
+            enabled: options.iter().map(|o| o.enabled).collect(),
+            focused: false,
+            validation_message: None,
+            validator: None,
+        };
+        // Snap the initial cursor onto the first enabled option, if any.
+        state.set_cursor(0);
+        state
+    }
+
+    /// Synchronises the state with a (possibly changed) option slice.
+    ///
+    /// Resizes the selection vector (truncating or zero-extending as
+    /// needed), refreshes the enabled mask, and clamps the cursor onto
+    /// the nearest enabled option.
+    pub fn sync_options(&mut self, options: &[MultiSelectOption]) {
+        self.selected.resize(options.len(), false);
+        self.enabled = options.iter().map(|o| o.enabled).collect();
+        self.set_cursor(self.cursor);
     }
 
     /// Sets a validator function that runs on blur.
@@ -321,18 +353,22 @@ impl MultiSelectState {
         self.selected.iter().filter(|&&s| s).count()
     }
 
+    fn is_enabled(&self, index: usize) -> bool {
+        self.enabled.get(index).copied().unwrap_or(true)
+    }
+
     /// Moves the cursor to the next enabled option (wraps around).
     ///
     /// Skips disabled options. If all options are disabled, the cursor
     /// does not move.
-    pub fn next(&mut self, options: &[MultiSelectOption]) {
-        let total = options.len();
+    pub fn next(&mut self) {
+        let total = self.selected.len();
         if total == 0 {
             return;
         }
         for _ in 0..total {
             self.cursor = (self.cursor + 1) % total;
-            if options[self.cursor].enabled {
+            if self.is_enabled(self.cursor) {
                 return;
             }
         }
@@ -342,14 +378,14 @@ impl MultiSelectState {
     ///
     /// Skips disabled options. If all options are disabled, the cursor
     /// does not move.
-    pub fn prev(&mut self, options: &[MultiSelectOption]) {
-        let total = options.len();
+    pub fn prev(&mut self) {
+        let total = self.selected.len();
         if total == 0 {
             return;
         }
         for _ in 0..total {
             self.cursor = if self.cursor == 0 { total - 1 } else { self.cursor - 1 };
-            if options[self.cursor].enabled {
+            if self.is_enabled(self.cursor) {
                 return;
             }
         }
@@ -357,11 +393,12 @@ impl MultiSelectState {
 
     /// Toggles the option at the current cursor position.
     ///
-    /// If `limit` is `Some(n)` and the option is currently unchecked,
-    /// the toggle is only applied if fewer than `n` options are already
-    /// selected. Deselecting always works regardless of limit.
+    /// Disabled rows are never toggled. If `limit` is `Some(n)` and the
+    /// option is currently unchecked, the toggle is only applied when
+    /// fewer than `n` options are already selected. Deselecting always
+    /// works regardless of limit.
     pub fn toggle_current(&mut self, limit: Option<usize>) {
-        if self.cursor >= self.selected.len() {
+        if self.cursor >= self.selected.len() || !self.is_enabled(self.cursor) {
             return;
         }
         if self.selected[self.cursor] {
@@ -376,19 +413,20 @@ impl MultiSelectState {
         }
     }
 
-    /// Selects all enabled options, up to `limit` if provided.
-    pub fn select_all(&mut self, options: &[MultiSelectOption], limit: Option<usize>) {
-        let mut count = 0;
-        for (i, opt) in options.iter().enumerate() {
+    /// Selects all enabled options, capped by `limit` if provided.
+    ///
+    /// The limit counts options that were already selected, so calling
+    /// `select_all(Some(n))` never leaves more than `n` items selected.
+    pub fn select_all(&mut self, limit: Option<usize>) {
+        let mut count = self.selected_count();
+        for i in 0..self.selected.len() {
             if let Some(max) = limit
                 && count >= max
             {
                 break;
             }
-            if opt.enabled
-                && let Some(s) = self.selected.get_mut(i)
-            {
-                *s = true;
+            if self.is_enabled(i) && !self.selected[i] {
+                self.selected[i] = true;
                 count += 1;
             }
         }
@@ -399,17 +437,39 @@ impl MultiSelectState {
         self.selected.fill(false);
     }
 
-    /// Sets the cursor directly (clamps to valid range).
+    /// Sets the cursor directly.
+    ///
+    /// Clamps to valid range and snaps forward to the nearest enabled
+    /// option. If no enabled option exists, the cursor stays at the
+    /// clamped position.
     pub fn set_cursor(&mut self, index: usize) {
         if self.selected.is_empty() {
             self.cursor = 0;
-        } else {
-            self.cursor = index.min(self.selected.len() - 1);
+            return;
         }
+        self.cursor = index.min(self.selected.len() - 1);
+        if self.is_enabled(self.cursor) {
+            return;
+        }
+        let total = self.selected.len();
+        let start = self.cursor;
+        for _ in 0..total {
+            self.cursor = (self.cursor + 1) % total;
+            if self.is_enabled(self.cursor) {
+                return;
+            }
+        }
+        // All disabled — stay at clamped position.
+        self.cursor = start;
     }
 
     /// Sets the selection state for a specific option.
+    ///
+    /// Disabled options are not modified.
     pub fn set_selected(&mut self, index: usize, selected: bool) {
+        if !self.is_enabled(index) {
+            return;
+        }
         if let Some(s) = self.selected.get_mut(index) {
             *s = selected;
         }
@@ -659,32 +719,31 @@ mod tests {
     #[test]
     fn next_wraps() {
         let opts = options(&["A", "B", "C"]);
-        let mut state = MultiSelectState::new(3);
-        state.next(&opts);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.next();
         assert_eq!(state.cursor(), 1);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.cursor(), 2);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.cursor(), 0);
     }
 
     #[test]
     fn prev_wraps() {
         let opts = options(&["A", "B", "C"]);
-        let mut state = MultiSelectState::new(3);
-        state.prev(&opts);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.prev();
         assert_eq!(state.cursor(), 2);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.cursor(), 1);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.cursor(), 0);
     }
 
     #[test]
     fn next_zero_options() {
-        let opts: Vec<MultiSelectOption> = vec![];
         let mut state = MultiSelectState::new(0);
-        state.next(&opts);
+        state.next();
         assert_eq!(state.cursor(), 0);
     }
 
@@ -695,8 +754,8 @@ mod tests {
             MultiSelectOption::new("B").enabled(false),
             MultiSelectOption::new("C"),
         ];
-        let mut state = MultiSelectState::new(3);
-        state.next(&opts);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.next();
         assert_eq!(state.cursor(), 2);
     }
 
@@ -707,9 +766,9 @@ mod tests {
             MultiSelectOption::new("B").enabled(false),
             MultiSelectOption::new("C"),
         ];
-        let mut state = MultiSelectState::new(3);
+        let mut state = MultiSelectState::from_options(&opts);
         state.set_cursor(2);
-        state.prev(&opts);
+        state.prev();
         assert_eq!(state.cursor(), 0);
     }
 
@@ -719,8 +778,8 @@ mod tests {
             MultiSelectOption::new("A").enabled(false),
             MultiSelectOption::new("B").enabled(false),
         ];
-        let mut state = MultiSelectState::new(2);
-        state.next(&opts);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.next();
         assert_eq!(state.cursor(), 0);
     }
 
@@ -755,8 +814,8 @@ mod tests {
     #[test]
     fn select_all_no_limit() {
         let opts = options(&["A", "B", "C"]);
-        let mut state = MultiSelectState::new(3);
-        state.select_all(&opts, None);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.select_all(None);
         assert_eq!(state.selected_count(), 3);
         assert_eq!(state.selected_indices(), vec![0, 1, 2]);
     }
@@ -764,8 +823,8 @@ mod tests {
     #[test]
     fn select_all_with_limit() {
         let opts = options(&["A", "B", "C"]);
-        let mut state = MultiSelectState::new(3);
-        state.select_all(&opts, Some(2));
+        let mut state = MultiSelectState::from_options(&opts);
+        state.select_all(Some(2));
         assert_eq!(state.selected_count(), 2);
         assert_eq!(state.selected_indices(), vec![0, 1]);
     }
@@ -777,11 +836,34 @@ mod tests {
             MultiSelectOption::new("B").enabled(false),
             MultiSelectOption::new("C"),
         ];
-        let mut state = MultiSelectState::new(3);
-        state.select_all(&opts, None);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.select_all(None);
         assert!(state.is_selected(0));
         assert!(!state.is_selected(1));
         assert!(state.is_selected(2));
+    }
+
+    #[test]
+    fn select_all_counts_existing_selections_against_limit() {
+        let opts = options(&["A", "B", "C", "D"]);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.set_selected(0, true);
+        state.set_selected(2, true);
+        state.select_all(Some(3));
+        // Already had 2 selected; only one more slot allowed.
+        assert_eq!(state.selected_count(), 3);
+        assert_eq!(state.selected_indices(), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn select_all_idempotent_when_already_at_limit() {
+        let opts = options(&["A", "B", "C"]);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.set_selected(0, true);
+        state.set_selected(1, true);
+        state.select_all(Some(2));
+        assert_eq!(state.selected_count(), 2);
+        assert_eq!(state.selected_indices(), vec![0, 1]);
     }
 
     #[test]
@@ -916,8 +998,8 @@ mod tests {
     fn render_cursor_at_second() {
         let opts = options(&["A", "B", "C"]);
         let multi = MultiSelect::new("Pick", &opts);
-        let mut state = MultiSelectState::new(3);
-        state.next(&opts);
+        let mut state = MultiSelectState::from_options(&opts);
+        state.next();
         assert_renders_content(
             &multi,
             &mut state,
@@ -1080,5 +1162,129 @@ mod tests {
         assert!(state.is_selected(1));
         state.set_selected(1, false);
         assert!(!state.is_selected(1));
+    }
+
+    #[test]
+    fn set_selected_ignores_disabled() {
+        let opts = vec![
+            MultiSelectOption::new("A"),
+            MultiSelectOption::new("B").enabled(false),
+        ];
+        let mut state = MultiSelectState::from_options(&opts);
+        state.set_selected(1, true);
+        assert!(!state.is_selected(1));
+    }
+
+    #[test]
+    fn set_cursor_snaps_past_disabled() {
+        let opts = vec![
+            MultiSelectOption::new("A"),
+            MultiSelectOption::new("B").enabled(false),
+            MultiSelectOption::new("C"),
+        ];
+        let mut state = MultiSelectState::from_options(&opts);
+        state.set_cursor(1);
+        assert_eq!(state.cursor(), 2);
+    }
+
+    #[test]
+    fn toggle_current_refuses_disabled() {
+        let opts = vec![
+            MultiSelectOption::new("A"),
+            MultiSelectOption::new("B").enabled(false),
+        ];
+        let mut state = MultiSelectState::from_options(&opts);
+        // Force the cursor onto a disabled row by bypassing set_cursor's snap.
+        // The only way to do that publicly is to construct the state with all
+        // options enabled, then sync to a slice where the cursor's option is
+        // disabled. But sync_options also snaps — so we instead verify the
+        // strongest invariant: even if the cursor lands on a disabled row via
+        // a future code path, toggle_current must not flip it.
+        state.set_cursor(1);
+        // set_cursor snapped forward; cursor is now 0 (only enabled option).
+        assert_eq!(state.cursor(), 0);
+        // Directly verify: with only one disabled row, toggling does nothing.
+        let opts2 = vec![MultiSelectOption::new("only").enabled(false)];
+        let mut state2 = MultiSelectState::from_options(&opts2);
+        state2.toggle_current(None);
+        assert!(!state2.is_selected(0));
+    }
+
+    #[test]
+    fn from_options_picks_up_enabled_flags() {
+        let opts = vec![
+            MultiSelectOption::new("A").enabled(false),
+            MultiSelectOption::new("B"),
+            MultiSelectOption::new("C"),
+        ];
+        let state = MultiSelectState::from_options(&opts);
+        // Cursor snapped onto first enabled option.
+        assert_eq!(state.cursor(), 1);
+    }
+
+    #[test]
+    fn sync_options_truncates_selections() {
+        let opts1 = options(&["A", "B", "C", "D"]);
+        let mut state = MultiSelectState::from_options(&opts1);
+        state.set_selected(0, true);
+        state.set_selected(3, true);
+        state.set_cursor(3);
+
+        let opts2 = options(&["A", "B"]);
+        state.sync_options(&opts2);
+
+        // Selection vec shrank; stale index 3 is gone.
+        assert_eq!(state.selected_indices(), vec![0]);
+        // Cursor clamped to new length.
+        assert_eq!(state.cursor(), 1);
+    }
+
+    #[test]
+    fn sync_options_does_not_resurrect_selections() {
+        let opts1 = options(&["A", "B"]);
+        let mut state = MultiSelectState::from_options(&opts1);
+        state.set_selected(1, true);
+
+        // Shrink and grow back: the dropped selection must not return.
+        state.sync_options(&options(&["A"]));
+        state.sync_options(&opts1);
+
+        assert_eq!(state.selected_indices(), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn sync_options_validator_sees_resized_slice() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        let observed_len = Rc::new(Cell::new(0));
+        let observed_clone = Rc::clone(&observed_len);
+        let mut state = MultiSelectState::new(0).validator(move |sel| {
+            observed_clone.set(sel.len());
+            Ok(None)
+        });
+        state.sync_options(&options(&["A", "B"]));
+        state.set_selected(0, true);
+        state.validate();
+        assert_eq!(observed_len.get(), 2);
+
+        state.sync_options(&options(&["X"]));
+        state.validate();
+        assert_eq!(observed_len.get(), 1);
+    }
+
+    #[test]
+    fn sync_options_refreshes_enabled_mask() {
+        let opts1 = options(&["A", "B", "C"]);
+        let mut state = MultiSelectState::from_options(&opts1);
+        state.set_cursor(2);
+
+        // Disable C; cursor should snap off it.
+        let opts2 = vec![
+            MultiSelectOption::new("A"),
+            MultiSelectOption::new("B"),
+            MultiSelectOption::new("C").enabled(false),
+        ];
+        state.sync_options(&opts2);
+        assert_eq!(state.cursor(), 0);
     }
 }

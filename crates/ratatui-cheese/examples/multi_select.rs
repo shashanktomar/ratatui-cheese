@@ -34,91 +34,92 @@ struct VariantData {
 }
 
 fn make_variants() -> Vec<VariantData> {
+    let basic_options: Vec<MultiSelectOption<'static>> = vec![
+        "Spectrometer".into(),
+        "Magnetometer".into(),
+        "Gravimeter".into(),
+        "Radiometer".into(),
+        "Altimeter".into(),
+    ];
+    let limit_options: Vec<MultiSelectOption<'static>> = vec![
+        "Dark matter detection".into(),
+        "Cosmic ray analysis".into(),
+        "Gravitational lensing".into(),
+        "Neutrino oscillation".into(),
+        "Pulsar timing".into(),
+    ];
+    let preselect_options: Vec<MultiSelectOption<'static>> = vec![
+        "Navigation".into(),
+        "Life support".into(),
+        "Communications".into(),
+        "Propulsion".into(),
+        "Shields".into(),
+    ];
+    let disabled_options: Vec<MultiSelectOption<'static>> = vec![
+        "Mars".into(),
+        MultiSelectOption::new("Europa").enabled(false),
+        "Titan".into(),
+        MultiSelectOption::new("Enceladus").enabled(false),
+        "Ganymede".into(),
+    ];
+    let validation_options: Vec<MultiSelectOption<'static>> = vec![
+        "Commander".into(),
+        "Pilot".into(),
+        "Engineer".into(),
+        "Scientist".into(),
+        "Medic".into(),
+    ];
+
     vec![
         VariantData {
             name: "Basic",
             title: "Instruments",
             description: Some("Select instruments for your mission."),
-            options: vec![
-                "Spectrometer".into(),
-                "Magnetometer".into(),
-                "Gravimeter".into(),
-                "Radiometer".into(),
-                "Altimeter".into(),
-            ],
+            state: MultiSelectState::from_options(&basic_options),
+            options: basic_options,
             limit: None,
             initial_cursor: 0,
             initial_selected: vec![],
             live_validate: false,
-            state: MultiSelectState::new(5),
         },
         VariantData {
             name: "With limit",
             title: "Experiments",
             description: Some("Choose up to 3 experiments."),
-            options: vec![
-                "Dark matter detection".into(),
-                "Cosmic ray analysis".into(),
-                "Gravitational lensing".into(),
-                "Neutrino oscillation".into(),
-                "Pulsar timing".into(),
-            ],
+            state: MultiSelectState::from_options(&limit_options),
+            options: limit_options,
             limit: Some(3),
             initial_cursor: 0,
             initial_selected: vec![],
             live_validate: false,
-            state: MultiSelectState::new(5),
         },
         VariantData {
             name: "Pre-selected",
             title: "Systems",
             description: Some("Review pre-configured systems."),
-            options: vec![
-                "Navigation".into(),
-                "Life support".into(),
-                "Communications".into(),
-                "Propulsion".into(),
-                "Shields".into(),
-            ],
+            state: MultiSelectState::from_options(&preselect_options),
+            options: preselect_options,
             limit: None,
             initial_cursor: 0,
             initial_selected: vec![0, 1, 2],
             live_validate: false,
-            state: MultiSelectState::new(5),
         },
         VariantData {
             name: "Disabled options",
             title: "Destinations",
             description: Some("Some destinations are restricted."),
-            options: vec![
-                "Mars".into(),
-                MultiSelectOption::new("Europa").enabled(false),
-                "Titan".into(),
-                MultiSelectOption::new("Enceladus").enabled(false),
-                "Ganymede".into(),
-            ],
+            state: MultiSelectState::from_options(&disabled_options),
+            options: disabled_options,
             limit: None,
             initial_cursor: 0,
             initial_selected: vec![],
             live_validate: false,
-            state: MultiSelectState::new(5),
         },
         VariantData {
             name: "Validation",
             title: "Crew roles",
             description: Some("Assign at least one role."),
-            options: vec![
-                "Commander".into(),
-                "Pilot".into(),
-                "Engineer".into(),
-                "Scientist".into(),
-                "Medic".into(),
-            ],
-            limit: None,
-            initial_cursor: 0,
-            initial_selected: vec![],
-            live_validate: true,
-            state: MultiSelectState::new(5).validator(|sel| {
+            state: MultiSelectState::from_options(&validation_options).validator(|sel| {
                 let count = sel.iter().filter(|&&s| s).count();
                 if count == 0 {
                     Err("Select at least one role".into())
@@ -129,6 +130,11 @@ fn make_variants() -> Vec<VariantData> {
                     )))
                 }
             }),
+            options: validation_options,
+            limit: None,
+            initial_cursor: 0,
+            initial_selected: vec![],
+            live_validate: true,
         },
     ]
 }
@@ -208,29 +214,24 @@ fn run(terminal: &mut DefaultTerminal) -> io::Result<()> {
                 KeyCode::Char('h') | KeyCode::Left => m.prev_variant(),
                 KeyCode::Char('l') | KeyCode::Right => m.next_variant(),
                 KeyCode::Char('j') | KeyCode::Down => {
-                    let v = &m.variants[m.variant_index];
-                    let opts = v.options.clone();
-                    let live = v.live_validate;
-                    m.variants[m.variant_index].state.next(&opts);
-                    if live {
-                        m.variants[m.variant_index].state.validate();
+                    let v = &mut m.variants[m.variant_index];
+                    v.state.next();
+                    if v.live_validate {
+                        v.state.validate();
                     }
                 }
                 KeyCode::Char('k') | KeyCode::Up => {
-                    let v = &m.variants[m.variant_index];
-                    let opts = v.options.clone();
-                    let live = v.live_validate;
-                    m.variants[m.variant_index].state.prev(&opts);
-                    if live {
-                        m.variants[m.variant_index].state.validate();
+                    let v = &mut m.variants[m.variant_index];
+                    v.state.prev();
+                    if v.live_validate {
+                        v.state.validate();
                     }
                 }
                 KeyCode::Char(' ') => {
-                    let limit = m.variants[m.variant_index].limit;
-                    let live = m.variants[m.variant_index].live_validate;
-                    m.variants[m.variant_index].state.toggle_current(limit);
-                    if live {
-                        m.variants[m.variant_index].state.validate();
+                    let v = &mut m.variants[m.variant_index];
+                    v.state.toggle_current(v.limit);
+                    if v.live_validate {
+                        v.state.validate();
                     }
                 }
                 KeyCode::Enter => {
@@ -286,25 +287,17 @@ fn view(frame: &mut Frame, m: &mut Model) {
     );
     Widget::render(heading, title_area, frame.buffer_mut());
 
-    // Clone options to avoid borrow conflict with state
-    let opts = m.variants[idx].options.clone();
-    let title = m.variants[idx].title;
-    let desc = m.variants[idx].description;
-    let limit = m.variants[idx].limit;
-
-    let mut multi = MultiSelect::new(title, &opts).styles(MultiSelectStyles::from_palette(palette));
-    if let Some(d) = desc {
+    // Split-borrow: take options + state from the same VariantData without cloning.
+    let v = &mut m.variants[idx];
+    let mut multi =
+        MultiSelect::new(v.title, &v.options).styles(MultiSelectStyles::from_palette(palette));
+    if let Some(d) = v.description {
         multi = multi.description(d);
     }
-    if let Some(l) = limit {
+    if let Some(l) = v.limit {
         multi = multi.limit(l);
     }
-    StatefulWidget::render(
-        &multi,
-        select_area,
-        frame.buffer_mut(),
-        &mut m.variants[idx].state,
-    );
+    StatefulWidget::render(&multi, select_area, frame.buffer_mut(), &mut v.state);
 
     // Paginator
     let paginator = Paginator::default().styles(PaginatorStyles::from_palette(palette));
