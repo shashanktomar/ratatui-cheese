@@ -89,6 +89,14 @@ Multiple-selection widget for toggling options on/off from a vertical list. Supp
 
 [Usage & docs](crates/ratatui-cheese/README.md#multi-select)
 
+### Palette
+
+Semantic color palette with 5 built-in presets. All widgets derive their styles from a shared `Palette`.
+
+![Palette](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/palette.png)
+
+[Usage & docs](crates/ratatui-cheese/README.md#palette)
+
 ## Examples
 
 Run the showcase to see all widgets in action:

@@ -339,13 +339,14 @@ let options: Vec<MultiSelectOption> = vec![
 let multi = MultiSelect::new("Instruments", &options)
     .description("Select instruments for your mission.");
 
-let mut state = MultiSelectState::new(options.len());
+let mut state = MultiSelectState::from_options(&options);
 
 // Navigation & toggling:
-// state.next(&options);    // move cursor down
-// state.prev(&options);    // move cursor up
+// state.next();                // move cursor down (skips disabled)
+// state.prev();                // move cursor up
 // state.toggle_current(None);  // toggle at cursor (pass Some(n) for limit)
-// state.select_all(&options, None);  // select all enabled
+// state.select_all(None);      // select all enabled
+// state.sync_options(&options); // call when the option list changes
 
 // In your draw function:
 // frame.render_stateful_widget(&multi, area, &mut state);
@@ -359,6 +360,18 @@ See it in action:
 
 ```sh
 cargo run --example multi_select
+```
+
+### Palette
+
+Semantic color palette with 5 built-in presets (Dark, Light, Charm, Ocean, Sunset). All widgets derive their styles from a shared `Palette` via `from_palette()`.
+
+![Palette](https://raw.githubusercontent.com/shashanktomar/ratatui-cheese/images/palette.png)
+
+See it in action:
+
+```sh
+cargo run --example palette
 ```
 
 ## License

@@ -4,6 +4,7 @@ pub mod input;
 pub mod list;
 pub mod multi_select;
 pub mod paginator;
+pub mod palette;
 pub mod select;
 pub mod spinner;
 pub mod tree;

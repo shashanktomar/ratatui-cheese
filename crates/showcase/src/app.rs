@@ -14,6 +14,7 @@ use crate::widgets::input::InputComponent;
 use crate::widgets::list::ListComponent;
 use crate::widgets::multi_select::MultiSelectComponent;
 use crate::widgets::paginator::PaginatorComponent;
+use crate::widgets::palette::PaletteComponent;
 use crate::widgets::select::SelectComponent;
 use crate::widgets::spinner::SpinnerComponent;
 use crate::widgets::tree::TreeComponent;
@@ -47,6 +48,7 @@ impl App {
                 Box::new(InputComponent::new()),
                 Box::new(SelectComponent::new()),
                 Box::new(MultiSelectComponent::new()),
+                Box::new(PaletteComponent::new()),
             ],
             selected: 0,
             focus: Focus::Sidebar,
